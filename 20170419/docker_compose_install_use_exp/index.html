@@ -1,0 +1,1162 @@
+<!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="荆棘之路" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。 1. 安装Docker和Compose   Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。 安装123$curl -">
+<meta name="keywords" content="docker,docker-compose">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Docker Compose安装、使用和示例">
+<meta property="og:url" content="http://www.javacn.top/20170419/docker_compose_install_use_exp/index.html">
+<meta property="og:site_name" content="荆棘之路">
+<meta property="og:description" content="Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。 1. 安装Docker和Compose   Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。 安装123$curl -">
+<meta property="og:updated_time" content="2017-05-03T03:07:07.306Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Docker Compose安装、使用和示例">
+<meta name="twitter:description" content="Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。 1. 安装Docker和Compose   Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。 安装123$curl -">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.javacn.top/20170419/docker_compose_install_use_exp/"/>
+
+
+
+
+
+  <title> Docker Compose安装、使用和示例 | 荆棘之路 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-98173663-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?0a667b2d82398abb1dcb34b2b09ca44a";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">荆棘之路</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Just Do It !</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off"
+             placeholder="搜索..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170419/docker_compose_install_use_exp/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Docker Compose安装、使用和示例
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-19T15:30:52+08:00">
+                2017-04-19
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/docker/" itemprop="url" rel="index">
+                    <span itemprop="name">docker</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a class="cloud-tie-join-count" href="/20170419/docker_compose_install_use_exp/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count join-count" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/20170419/docker_compose_install_use_exp/" class="leancloud_visitors" data-flag-title="Docker Compose安装、使用和示例">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  1,687
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  8
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。</p>
+<h1 id="1-安装Docker和Compose"><a href="#1-安装Docker和Compose" class="headerlink" title="1. 安装Docker和Compose"></a>1. 安装Docker和Compose</h1><p>   Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。</p>
+<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$curl</span> -L <span class="string">"https://github.com/docker/compose/releases/download/1.11.2/docker-compose-$(uname -s)-$(uname -m)"</span> -o /usr/local/bin/docker-compose</div><div class="line">    </div><div class="line"><span class="variable">$chmod</span> +x /usr/local/bin/docker-compose</div></pre></td></tr></table></figure>
+<a id="more"></a>
+<h2 id="测试安装结果"><a href="#测试安装结果" class="headerlink" title="测试安装结果"></a>测试安装结果</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span>-compose --version</div><div class="line">docker-compose version: <span class="number">1.11</span>.<span class="number">2</span></div></pre></td></tr></table></figure>
+<h1 id="2-使用Compose"><a href="#2-使用Compose" class="headerlink" title="2. 使用Compose"></a>2. 使用Compose</h1><p>使用Compose只需要简单的三个步骤：</p>
+<p><strong>首先</strong>，使用Dockerfile来定义你的应用环境：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="string">FROM</span> <span class="attr">python:2.7</span></div><div class="line"><span class="string">ADD</span> <span class="string">./code</span></div><div class="line"><span class="string">WORKDIR</span> <span class="string">/code</span></div><div class="line"><span class="string">RUN</span> <span class="string">pip</span> <span class="string">install</span> <span class="bullet">-r</span> <span class="string">requirements.txt</span></div></pre></td></tr></table></figure></p>
+<p>其中，requirements.txt中的内容包括：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">flask</div><div class="line">redis</div></pre></td></tr></table></figure></p>
+<p>再用Python写一个简单的app.py<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> flask importFlaskfrom redis importRedisimport os</div><div class="line">app =Flask(__name__)</div><div class="line">redis =Redis(host=<span class="string">'redis'</span>, port=<span class="number">6379</span>)@app.route(<span class="string">'/'</span>)<span class="function"><span class="keyword">def</span> <span class="title">hello</span><span class="params">()</span>:</span></div><div class="line">    redis.incr(<span class="string">'hits'</span>)<span class="keyword">return</span><span class="string">'Hello World! I have been seen %s times.'</span>% redis.get(<span class="string">'hits'</span>)<span class="keyword">if</span> __name__ `<span class="string">"__main__"</span>:</div><div class="line">    app.run(host=<span class="string">"0.0.0.0"</span>, debug=<span class="keyword">True</span>)</div></pre></td></tr></table></figure></p>
+<p><strong>第二步</strong>，用一个compose.yaml来定义你的应用服务，他们可以把不同的服务生成不同的容器中组成你的应用。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="attr">web:</span></div><div class="line"><span class="attr">  build:</span><span class="string">.</span></div><div class="line"><span class="attr">  command:</span> <span class="string">python</span> <span class="string">app.py</span></div><div class="line"><span class="attr">  ports:</span></div><div class="line"><span class="bullet">         -</span> <span class="string">"5000:5000"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">         -</span> <span class="string">.:/code</span></div><div class="line"><span class="attr">  links:</span></div><div class="line"><span class="bullet">         -</span> <span class="string">redis</span></div><div class="line"><span class="attr">redis:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">redis</span></div></pre></td></tr></table></figure></p>
+<p><strong>第三步</strong>，执行docker-compose up来启动你的应用，它会根据compose.yaml的设置来pull/run这俩个容器，然后再启动。</p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">Creating myapp_redis_1...</div><div class="line">Creating myapp_web_1...</div><div class="line">Building web...</div><div class="line">Step 0 : FROM python:2.7</div><div class="line">2.7: Pulling from python</div><div class="line">...</div><div class="line">Status: Downloaded newer image for python:2.7</div><div class="line"> ---&gt; d833e0b23482</div><div class="line">Step 1 : ADD . /code</div><div class="line"> ---&gt; 1c04b1b15808</div><div class="line">Removing intermediate container 9dab91b4410d</div><div class="line">Step 2 : WORKDIR /code</div><div class="line"> ---&gt; Running in f495a62feac9</div><div class="line"> ---&gt; ffea89a7b090</div><div class="line">Attaching to myapp_redis_1, myapp_web_1</div><div class="line">......</div><div class="line">redis_1 | [1] 17 May 10:42:38.147 * The server is now ready to accept connections on port 6379</div><div class="line">web_1   |  * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)</div><div class="line">web_1   |  * Restarting with stat</div></pre></td></tr></table></figure>
+<h1 id="3-Yaml文件参考"><a href="#3-Yaml文件参考" class="headerlink" title="3. Yaml文件参考"></a>3. Yaml文件参考</h1><p>在上面的yaml文件中，我们可以看到compose文件的基本结构。首先是定义一个服务名，下面是yaml服务中的一些选项条目：</p>
+<p><code>image</code>:镜像的ID<br><code>build</code>:直接从pwd的Dockerfile来build，而非通过image选项来pull<br><code>links</code>：连接到那些容器。每个占一行，格式为SERVICE[:ALIAS],例如 – db[:database]<br><code>external_links</code>：连接到该compose.yaml文件之外的容器中，比如是提供共享或者通用服务的容器服务。格式同links<br><code>command</code>：替换默认的command命令<br><code>ports</code>: 导出端口。格式可以是：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="attr">ports:</span><span class="bullet">-"3000"-"8000:8000"-"127.0.0.1:8001:8001"</span></div></pre></td></tr></table></figure></p>
+<p><code>expose</code>:导出端口，但不映射到宿主机的端口上。它仅对links的容器开放。格式直接指定端口号即可。<br><code>volumes</code>：加载路径作为卷，可以指定只读模式：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attr">volumes:</span><span class="bullet">-/var/lib/mysql</span></div><div class="line"><span class="bullet"> -</span> <span class="string">cache/:/tmp/cache</span></div><div class="line"><span class="bullet"> -</span><span class="string">~/configs:/etc/configs/:ro</span></div></pre></td></tr></table></figure></p>
+<p><code>volumes_from</code>：加载其他容器或者服务的所有卷<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="attr">environment:</span><span class="bullet">-</span> <span class="string">RACK_ENV=development</span></div><div class="line"><span class="bullet">  -</span> <span class="string">SESSION_SECRET</span></div></pre></td></tr></table></figure></p>
+<p><code>env_file</code>：从一个文件中导入环境变量，文件的格式为RACK_ENV=development<br><code>extends</code>:扩展另一个服务，可以覆盖其中的一些选项。一个sample如下：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="attr">webapp:</span></div><div class="line"><span class="attr">  build:</span><span class="string">./webapp</span></div><div class="line"><span class="attr">  environment:</span><span class="bullet">-</span> <span class="string">DEBUG=false-</span> <span class="string">SEND_EMAILS=false</span></div><div class="line"><span class="string">development.yml</span></div><div class="line"><span class="attr">web:</span><span class="attr">extends:</span></div><div class="line"><span class="attr">    file:</span> <span class="string">common.yml</span></div><div class="line"><span class="attr">    service:</span> <span class="string">webapp</span></div><div class="line"><span class="attr">  ports:</span><span class="bullet">-"8000:8000"</span></div><div class="line"><span class="attr">  links:</span><span class="bullet">-</span> <span class="string">db</span></div><div class="line"><span class="attr">  environment:</span><span class="bullet">-</span> <span class="string">DEBUG=true</span></div><div class="line"><span class="attr">db:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">postgres</span></div></pre></td></tr></table></figure></p>
+<p><code>net</code>：容器的网络模式，可以为”bridge”, “none”, “container:[name or id]”, “host”中的一个。<br><code>dns</code>：可以设置一个或多个自定义的DNS地址。<br><code>dns_search</code>:可以设置一个或多个DNS的扫描域。<br>其他的<code>working_dir</code>, <code>entrypoint</code>, <code>user</code>, <code>hostname</code>, <code>domainname</code>, <code>mem_limit</code>, <code>privileged</code>, <code>restart</code>, <code>stdin_open</code>, <code>tty</code>, <code>cpu_shares</code>，和<code>docker run</code>命令是一样的，这些命令都是单行的命令。例如：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="attr">cpu_shares:</span><span class="number">73</span></div><div class="line"><span class="attr">working_dir:</span><span class="string">/code</span></div><div class="line"><span class="attr">entrypoint:</span> <span class="string">/code/entrypoint.sh</span></div><div class="line"><span class="attr">user:</span> <span class="string">postgresql</span></div><div class="line"><span class="attr">hostname:</span> <span class="string">foo</span></div><div class="line"><span class="attr">domainname:</span> <span class="string">foo.com</span></div><div class="line"><span class="attr">mem_limit:</span><span class="number">1000000000</span></div><div class="line"><span class="attr">privileged:</span><span class="literal">true</span></div><div class="line"><span class="attr">restart:</span> <span class="string">always</span></div><div class="line"><span class="attr">stdin_open:</span><span class="literal">true</span></div><div class="line"><span class="attr">tty:</span><span class="literal">true</span></div></pre></td></tr></table></figure></p>
+<h1 id="4-docker-compose常用命令"><a href="#4-docker-compose常用命令" class="headerlink" title="4. docker-compose常用命令"></a>4. docker-compose常用命令</h1><p>在第二节中的<code>docker-compose up</code>，这两个容器都是在前台运行的。我们可以指定-d命令以daemon的方式启动容器。除此之外，docker-compose还支持下面参数：  </p>
+<p><code>--verbose</code>：输出详细信息<br><code>-f</code> 制定一个非docker-compose.yml命名的yaml文件<br><code>-p</code> 设置一个项目名称（默认是directory名）  </p>
+<p><code>docker-compose</code>的动作包括：</p>
+<p>&emsp; <code>build</code>：构建服务<br>&emsp; <code>kill -s SIGINT</code>：给服务发送特定的信号。<br>&emsp; <code>logs</code>：输出日志<br>&emsp; <code>port</code>：输出绑定的端口<br>&emsp; <code>ps</code>：输出运行的容器<br>&emsp; <code>pull</code>：pull服务的image<br>&emsp; <code>rm</code>：删除停止的容器<br>&emsp; <code>run</code>: 运行某个服务，例如docker-compose run web python manage.py ps<br>&emsp; <code>start</code>：运行某个服务中存在的容器。<br>&emsp; <code>stop</code>:停止某个服务中存在的容器。<br>&emsp; <code>up</code>：create + run + attach容器到服务。<br>&emsp; <code>scale</code>：设置服务运行的容器数量。例如：docker-compose scale web=2 worker=3</p>
+<h1 id="5-个人示例"><a href="#5-个人示例" class="headerlink" title="5. 个人示例"></a>5. 个人示例</h1><h2 id="示例一"><a href="#示例一" class="headerlink" title="示例一"></a>示例一</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$vim</span> ~/workspace/docker-compose-env.yml</div></pre></td></tr></table></figure>
+<h3 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h3><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="attr">mysql:</span></div><div class="line"><span class="attr">  image:</span> <span class="attr">mysql:5.6.35</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">mysql_db</span></div><div class="line"><span class="attr">  expose:</span></div><div class="line"><span class="bullet">    -</span> <span class="string">"3306"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/var/lib/mysql/:/var/lib/mysql/</span></div><div class="line"><span class="attr">  environment:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">MYSQL_ROOT_PASSWORD=yourpassword</span></div><div class="line"><span class="attr">  net:</span> <span class="string">mynet</span></div><div class="line"></div><div class="line"><span class="attr">rbac:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat:7-jre8-alpine</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">rbac</span></div><div class="line"><span class="attr">  expose:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">"8080"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/workspace/projects/rbac/:/usr/local/tomcat/webapps/rbac</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/rbac/tomcat/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/rbac/:/home/logs/rbac/</span></div><div class="line"><span class="attr">  net:</span>  <span class="string">mynet</span></div><div class="line"><span class="attr">  links:</span></div><div class="line"><span class="attr">        - mysql:</span><span class="string">mysql_db</span></div></pre></td></tr></table></figure>
+<ul>
+<li>mynet是创建的overlay网络， 详见<a href="http://note.youdao.com/group/#/16052066/(folder/137189937//full:md/137649015" target="_blank" rel="external">基于consul的Docker-overlay跨多宿主机容器网络</a>?full=true)</li>
+</ul>
+<h3 id="运行"><a href="#运行" class="headerlink" title="运行"></a>运行</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span>-compose -f ~/workspace/docker-compose-env.yml up -d</div></pre></td></tr></table></figure>
+<h3 id="查看启动情况"><a href="#查看启动情况" class="headerlink" title="查看启动情况"></a>查看启动情况</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> ps</div><div class="line"></div><div class="line">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES</div><div class="line"><span class="number">936</span>d6a048068        mysql:<span class="number">5.6</span>.<span class="number">35</span>        <span class="string">"docker-entrypoint..."</span>   <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">3306</span>/tcp                 workspace_mysql_1</div><div class="line">f1827893e1b4        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">8080</span>/tcp                 workspace_rbac_1</div></pre></td></tr></table></figure>
+<h2 id="示例二"><a href="#示例二" class="headerlink" title="示例二"></a>示例二</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$vim</span> ~/workspace/docker-compose-projects.yml</div></pre></td></tr></table></figure>
+<h3 id="代码：-1"><a href="#代码：-1" class="headerlink" title="代码："></a>代码：</h3><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="attr">discenter:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat:7-jre8-alpine</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">discenter</span></div><div class="line"><span class="attr">  ports:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">"8888:8080"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/workspace/projects/discenter/:/usr/local/tomcat/webapps/ROOT</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/discenter/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="attr">  net:</span> <span class="string">mynet</span></div><div class="line"></div><div class="line"><span class="attr">cms:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat:7-jre8-alpine</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">cms</span></div><div class="line"><span class="attr">  ports:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">"8887:8080"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/workspace/projects/cms/:/usr/local/tomcat/webapps/ROOT</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/cms/tomcat/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/cms/:/home/logs/cms/</span></div><div class="line"><span class="attr">  net:</span> <span class="string">mynet</span></div></pre></td></tr></table></figure>
+<h3 id="运行-1"><a href="#运行-1" class="headerlink" title="运行"></a>运行</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span>-compose -f ~/workspace/docker-compose-projects.yml up -d</div></pre></td></tr></table></figure>
+<h3 id="查看启动情况-1"><a href="#查看启动情况-1" class="headerlink" title="查看启动情况"></a>查看启动情况</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> ps </div><div class="line"></div><div class="line">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES</div><div class="line"><span class="number">44</span>c331824b2f        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">0.0</span>.<span class="number">0.0</span>:<span class="number">8888</span>-&gt;<span class="number">8080</span>/tcp   workspace_discenter_1</div><div class="line">b3b5ec77f75a        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">0.0</span>.<span class="number">0.0</span>:<span class="number">8887</span>-&gt;<span class="number">8080</span>/tcp   workspace_cms_1</div><div class="line">f1827893e1b4        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">8080</span>/tcp                 workspace_rbac_1</div><div class="line"><span class="number">936</span>d6a048068        mysql:<span class="number">5.6</span>.<span class="number">35</span>        <span class="string">"docker-entrypoint..."</span>   <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">3306</span>/tcp                 workspace_mysql_1</div></pre></td></tr></table></figure>
+<h2 id="示例三"><a href="#示例三" class="headerlink" title="示例三"></a>示例三</h2><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div></pre></td><td class="code"><pre><div class="line"><span class="attr">version:</span> <span class="string">'2.1'</span></div><div class="line"></div><div class="line"><span class="attr">services:</span></div><div class="line"><span class="attr">  mysql:</span></div><div class="line"><span class="attr">        image:</span> <span class="string">hub.c.163.com/zhaoshg/mysql:5.6.35</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">mysql</span></div><div class="line"><span class="attr">        volumes:</span></div><div class="line"><span class="bullet">          -</span> <span class="string">/home/zhaoshg/workspace/docker-data/mysql/:/var/lib/mysql/</span></div><div class="line"><span class="attr">        expose:</span></div><div class="line"><span class="bullet">          -</span> <span class="string">"3306"</span></div><div class="line"><span class="attr">        environment:</span></div><div class="line"><span class="bullet">          -</span> <span class="string">MYSQL_ROOT_PASSWORD=yourpassword</span></div><div class="line"><span class="attr">        healthcheck:</span></div><div class="line"><span class="attr">          test:</span> <span class="string">["CMD",</span> <span class="string">"curl"</span><span class="string">,</span> <span class="string">"-f"</span><span class="string">,</span> <span class="string">"http://localhost:3306 || exit 1"</span><span class="string">]</span></div><div class="line"><span class="attr">          interval:</span> <span class="number">10</span><span class="string">s</span></div><div class="line"><span class="attr">          timeout:</span> <span class="number">5</span><span class="string">s</span></div><div class="line"><span class="attr">          retries:</span> <span class="number">3</span></div><div class="line"><span class="comment">#       mem_limit: 256m</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="attr">  memcached:</span></div><div class="line"><span class="attr">        image:</span> <span class="attr">memcached:1.4.36-alpine</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">memcached</span></div><div class="line"><span class="attr">        ports:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"11211:11211"</span></div><div class="line"><span class="attr">        mem_limit:</span> <span class="number">56</span><span class="string">m</span></div><div class="line"></div><div class="line"><span class="attr">  fdfssingle:</span></div><div class="line"><span class="attr">        image:</span> <span class="string">hub.c.163.com/zhaoshg/fastdfs</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">fdfssingle</span></div><div class="line"><span class="attr">        ports:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"22122:22122"</span></div><div class="line"><span class="attr">        volumes:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/fastdfs:/fastdfs</span></div><div class="line"><span class="attr">        mem_limit:</span> <span class="number">200</span><span class="string">m</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="attr">  myweb:</span></div><div class="line"><span class="attr">        image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">myweb</span></div><div class="line"><span class="attr">        environment:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">JAVA_OPTS=-Djava.rmi.server.hostname=192.168.2.139</span> <span class="bullet">-Dcom.sun.management.jmxremote=true</span> <span class="bullet">-Dcom.sun.management.jmxremote.local.only=false</span> <span class="bullet">-Dcom.sun.management.jmxremote.port=18900</span> <span class="bullet">-Dcom.sun.management.jmxremote.rmi.port=18901</span> <span class="bullet">-Dcom.sun.management.jmxremote.ssl=false</span> <span class="bullet">-Dcom.sun.management.jmxremote.authenticate=false</span> <span class="bullet">-Xms512m</span> <span class="bullet">-Xmx512m</span></div><div class="line"><span class="attr">        links:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">mysql</span></div><div class="line"><span class="bullet">                -</span> <span class="string">memcached</span></div><div class="line"><span class="attr">        depends_on:</span></div><div class="line"><span class="attr">          mysql:</span></div><div class="line"><span class="attr">                condition:</span> <span class="string">service_healthy</span></div><div class="line"><span class="attr">          memcached:</span></div><div class="line"><span class="attr">                condition:</span> <span class="string">service_started</span></div><div class="line"><span class="attr">        ports:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"8100:8080"</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"18900:18900"</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"18901:18901"</span></div><div class="line"><span class="attr">        volumes:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/workspace/projects/discenter/:/usr/local/tomcat/webapps/ROOT</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/logs/discenter/tomcat/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/logs/discenter/web/:/home/logs/discenter/</span></div><div class="line"><span class="attr">        healthcheck:</span></div><div class="line"><span class="attr">          test:</span> <span class="string">curl</span> <span class="bullet">-f</span> <span class="attr">http://localhost:8080/favicon.ico</span> <span class="string">||</span> <span class="string">exit</span> <span class="number">1</span></div><div class="line"><span class="attr">          interval:</span> <span class="number">30</span><span class="string">s</span></div><div class="line"><span class="attr">          timeout:</span> <span class="number">5</span><span class="string">s</span></div><div class="line"><span class="attr">          retries:</span> <span class="number">3</span></div></pre></td></tr></table></figure>
+<p>参考:<br><a href="http://docs.docker.com/compose/" target="_blank" rel="external">Compose Document</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/docker/" rel="tag"># docker</a>
+          
+            <a href="/tags/docker-compose/" rel="tag"># docker-compose</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/20170419/hexo_tags_categories/" rel="next" title="Hexo的分类和标签设置">
+                <i class="fa fa-chevron-left"></i> Hexo的分类和标签设置
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/20170419/docker_q_and_a/" rel="prev" title="Docker常见问题及解决方案">
+                Docker常见问题及解决方案 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/face.jpg"
+               alt="曙光" />
+          <p class="site-author-name" itemprop="name">曙光</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">25</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/zhaoshg" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a rel="external nofollow" href="http://www.nongrj.com/" title="农仁街" target="_blank">农仁街</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-安装Docker和Compose"><span class="nav-number">1.</span> <span class="nav-text">1. 安装Docker和Compose</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#安装"><span class="nav-number">1.1.</span> <span class="nav-text">安装</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#测试安装结果"><span class="nav-number">1.2.</span> <span class="nav-text">测试安装结果</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-使用Compose"><span class="nav-number">2.</span> <span class="nav-text">2. 使用Compose</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-Yaml文件参考"><span class="nav-number">3.</span> <span class="nav-text">3. Yaml文件参考</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-docker-compose常用命令"><span class="nav-number">4.</span> <span class="nav-text">4. docker-compose常用命令</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#5-个人示例"><span class="nav-number">5.</span> <span class="nav-text">5. 个人示例</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#示例一"><span class="nav-number">5.1.</span> <span class="nav-text">示例一</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#代码："><span class="nav-number">5.1.1.</span> <span class="nav-text">代码：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#运行"><span class="nav-number">5.1.2.</span> <span class="nav-text">运行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查看启动情况"><span class="nav-number">5.1.3.</span> <span class="nav-text">查看启动情况</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#示例二"><span class="nav-number">5.2.</span> <span class="nav-text">示例二</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#代码：-1"><span class="nav-number">5.2.1.</span> <span class="nav-text">代码：</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#运行-1"><span class="nav-number">5.2.2.</span> <span class="nav-text">运行</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#查看启动情况-1"><span class="nav-number">5.2.3.</span> <span class="nav-text">查看启动情况</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#示例三"><span class="nav-number">5.3.</span> <span class="nav-text">示例三</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" align="center">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">曙光</span>
+</div>
+<!--
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+-->
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fastclick/1.0.6/fastclick.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+    
+    <script>
+      var cloudTieConfig = {
+        url: document.location.href, 
+        sourceId: "",
+        productKey: "66baac132d9b4e38acd9a0a664710c6f",
+        target: "cloud-tie-wrapper"
+      };
+    </script>
+    <script src="https://img1.ws.126.net/f2e/tie/yun/sdk/loader.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("HofnnMS813HyOHPUrN3wmNkQ-gzGzoHsz", "mL2pwohDw3hUOwrR9jaBs553");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+
+</body>
+</html>

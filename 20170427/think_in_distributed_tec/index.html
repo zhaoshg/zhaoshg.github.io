@@ -1,0 +1,1245 @@
+<!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="荆棘之路" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="分布式系统的难点分布式系统比起单机系统存在哪些难点呢？ 网络因素由于服务和数据分布在不同的机器上，每次交互都需要跨机器运行，这带来如下几个问题：  网络延迟：性能、超时  同机房的网络IO还是比较块的，但是跨机房，尤其是跨IDC，网络IO就成为不可忽视的性能瓶颈了。并且，延迟不是带宽，带宽可以随便增加，千兆网卡换成万兆，只是成本的问题，但延迟是物理限制，基本不可能降低。 这带来的问题就是系统整体性">
+<meta name="keywords" content="算法,转载,分布式">
+<meta property="og:type" content="article">
+<meta property="og:title" content="分布式系统常用思想和技术总结">
+<meta property="og:url" content="http://www.javacn.top/20170427/think_in_distributed_tec/index.html">
+<meta property="og:site_name" content="荆棘之路">
+<meta property="og:description" content="分布式系统的难点分布式系统比起单机系统存在哪些难点呢？ 网络因素由于服务和数据分布在不同的机器上，每次交互都需要跨机器运行，这带来如下几个问题：  网络延迟：性能、超时  同机房的网络IO还是比较块的，但是跨机房，尤其是跨IDC，网络IO就成为不可忽视的性能瓶颈了。并且，延迟不是带宽，带宽可以随便增加，千兆网卡换成万兆，只是成本的问题，但延迟是物理限制，基本不可能降低。 这带来的问题就是系统整体性">
+<meta property="og:image" content="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B8%B8%E7%94%A8%E6%80%9D%E6%83%B3%E5%92%8C%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/1.jpg">
+<meta property="og:updated_time" content="2017-05-03T03:17:39.537Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="分布式系统常用思想和技术总结">
+<meta name="twitter:description" content="分布式系统的难点分布式系统比起单机系统存在哪些难点呢？ 网络因素由于服务和数据分布在不同的机器上，每次交互都需要跨机器运行，这带来如下几个问题：  网络延迟：性能、超时  同机房的网络IO还是比较块的，但是跨机房，尤其是跨IDC，网络IO就成为不可忽视的性能瓶颈了。并且，延迟不是带宽，带宽可以随便增加，千兆网卡换成万兆，只是成本的问题，但延迟是物理限制，基本不可能降低。 这带来的问题就是系统整体性">
+<meta name="twitter:image" content="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B8%B8%E7%94%A8%E6%80%9D%E6%83%B3%E5%92%8C%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/1.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.javacn.top/20170427/think_in_distributed_tec/"/>
+
+
+
+
+
+  <title> 分布式系统常用思想和技术总结 | 荆棘之路 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-98173663-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?0a667b2d82398abb1dcb34b2b09ca44a";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">荆棘之路</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Just Do It !</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off"
+             placeholder="搜索..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170427/think_in_distributed_tec/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                分布式系统常用思想和技术总结
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-27T11:40:48+08:00">
+                2017-04-27
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/分布式/" itemprop="url" rel="index">
+                    <span itemprop="name">分布式</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a class="cloud-tie-join-count" href="/20170427/think_in_distributed_tec/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count join-count" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/20170427/think_in_distributed_tec/" class="leancloud_visitors" data-flag-title="分布式系统常用思想和技术总结">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  5,148
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  18
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="分布式系统的难点"><a href="#分布式系统的难点" class="headerlink" title="分布式系统的难点"></a>分布式系统的难点</h1><p>分布式系统比起单机系统存在哪些难点呢？</p>
+<h2 id="网络因素"><a href="#网络因素" class="headerlink" title="网络因素"></a>网络因素</h2><p>由于服务和数据分布在不同的机器上，每次交互都需要跨机器运行，这带来如下几个问题：</p>
+<ul>
+<li>网络延迟：性能、超时</li>
+</ul>
+<p>同机房的网络IO还是比较块的，但是跨机房，尤其是跨IDC，网络IO就成为不可忽视的性能瓶颈了。并且，延迟不是带宽，带宽可以随便增加，千兆网卡换成万兆，只是成本的问题，但延迟是物理限制，基本不可能降低。</p>
+<p>这带来的问题就是系统整体性能的降低，会带来一系列的问题，比如资源的锁住，所以系统调用一般都要设置一个超时时间进行自我保护，但是过度的延迟就会带来系统的RPC调用超时，引发一个令人头疼的问题：分布式系统调用的三态结果：成功、失败、超时。不要小看这个第三态，这几乎是所有分布式系统复杂性的根源。</p>
+<a id="more"></a>
+<p>针对这个问题有一些相应的解决方案：异步化，失败重试。 而对于跨IDC数据分布带来的巨大网络因素影响，则一般会采用数据同步，代理专线等处理方式。</p>
+<ul>
+<li>网络故障：丢包、乱序、抖动。</li>
+</ul>
+<p>这个可以通过将服务建立在可靠的传输协议上来解决，比如TCP协议。不过带来的是更多的网络交互。因此是性能和流量的一个trade off。这个在移动互联网中更需要考虑。</p>
+<h2 id="鱼与熊掌不可兼得——CAP定律"><a href="#鱼与熊掌不可兼得——CAP定律" class="headerlink" title="鱼与熊掌不可兼得——CAP定律"></a>鱼与熊掌不可兼得——CAP定律</h2><p>CAP理论是由Eric Brewer提出的分布式系统中最为重要的理论之一：</p>
+<ol>
+<li>Consistency：[强]一致性，事务保障，ACID模型。</li>
+<li>Availiablity：[高]可用性，冗余以避免单点，至少做到柔性可用（服务降级）。</li>
+<li>Partition tolerance：[高]可扩展性（分区容忍性）：一般要求系统能够自动按需扩展，比如HBase。</li>
+</ol>
+<p>CAP原理告诉我们，这三个因素最多只能满足两个，不可能三者兼顾。对于分布式系统来说，分区容错是基本要求，所以必然要放弃一致性。对于大型网站来说，分区容错和可用性的要求更高，所以一般都会选择适当放弃一致性。对应CAP理论，NoSQL追求的是AP，而传统数据库追求的是CA，这也可以解释为什么传统数据库的扩展能力有限的原因。</p>
+<p>在CAP三者中，“<strong><em>可扩展性</em></strong>”是分布式系统的特有性质。<em>分布式系统的设计初衷就是利用集群多机的能力处理单机无法解决的问题</em>。当需要扩展系统性能时，<em>一种做法是优化系统的性能或者升级硬件(scale up)，一种做法就是“简单”的增加机器来扩展系统的规模(scale out)</em>。好的分布式系统总在追求”<strong><em>线性扩展性</em></strong>”，即<strong>性能可以随集群数量增长而线性增长</strong>。</p>
+<p>可用性和可扩展性一般是相关联的，可扩展行好的系统，其可用性一般会比较高，因为有多个服务(数据)节点，不是整体的单点。所以<strong>分布式系统的所有问题，基本都是在一致性与可用性和可扩展性这两者之间的一个协调和平衡</strong>。对于没有状态的系统，不存在一致性问题，根据CAP原理，它们的可用性和分区容忍性都是很高，简单的添加机器就可以实现线性扩展。而对于有状态的系统，则需要根据业务需求和特性在CAP三者中牺牲其中的一者。一般来说，交易系统类的业务对一致性的要求比较高，一般会采用ACID模型来保证数据的强一致性，所以其可用性和扩展性就比较差。而其他大多数业务系统一般不需要保证强一致性，只要最终一致就可以了，它们一般采用BASE模型，用最终一致性的思想来设计分布式系统，从而使得系统可以达到很高的可用性和扩展性。</p>
+<p>CAP定律其实也是衡量分布式系统的重要指标，另一个重要的指标是性能。</p>
+<h2 id="一致性模型"><a href="#一致性模型" class="headerlink" title="一致性模型"></a>一致性模型</h2><p>主要有三种：</p>
+<ul>
+<li>Strong Consistency（强一致性）：新的数据一旦写入，在任意副本任意时刻都能读到新值。比如：文件系统，RDBMS，Azure Table都是强一致性的。</li>
+<li>Week Consistency（弱一致性）：不同副本上的值有新有旧，需要应用方做更多的工作获取最新值。比如Dynamo。</li>
+<li>Evantual Consistency（最终一致性）：一旦更新成功，各副本的数据最终将达到一致。</li>
+</ul>
+<p>从这三种一致型的模型上来说，我们可以看到，Weak和Eventually一般来说是异步冗余的，而Strong一般来说是同步冗余的(多写)，异步的通常意味着更好的性能，但也意味着更复杂的状态控制。同步意味着简单，但也意味着性能下降。</p>
+<p>以及其他变体：</p>
+<ul>
+<li>Causal Consistency（因果一致性）：如果Process A通知Process B它已经更新了数据，那么Process B的后续读取操作则读取A写入的最新值，而与A没有因果关系的C则可以最终一致性。</li>
+<li>Read-your-writes Consistency（读你所写一致性）：如果Process A写入了最新的值，那么 Process A的后续操作都会读取到最新值。但是其它用户可能要过一会才可以看到。</li>
+<li>Session Consistency（会话一致性）：一次会话内一旦读到某个值，不会读到更旧的值。<br>Monotonic Read Consistency（单调一致性）：一个用户一旦读到某个值，不会读到比这个值更旧的值，其他用户不一定。<br>等等。</li>
+</ul>
+<p>其中最重要的变体是第二条：<strong>Read-your-Writes Consistency</strong>。特别适用于数据的更新同步，用户的修改马上对自己可见，但是其他用户可以看到他老的版本。Facebook的数据同步就是采用这种原则。</p>
+<h1 id="分布式系统常用技术和应用场景"><a href="#分布式系统常用技术和应用场景" class="headerlink" title="分布式系统常用技术和应用场景"></a>分布式系统常用技术和应用场景</h1><ul>
+<li>consistent hashing [with virtual node]：一致性哈希，数据分布</li>
+<li>vector clock：时钟向量，多版本数据修改</li>
+<li>Quorum W+R&gt;N [with vector clock]：抽屉原理，数据一致性的另一种解决方案。时钟向量，多版本数据修改。</li>
+<li>Merkle tree [with anti-entropy]：数据复制</li>
+<li>MVCC：copy-on-write与snapshot</li>
+<li>2PC/3PC：分布式事务</li>
+<li>Paxos：强一致性协议</li>
+<li>Symmetry and Decentralization：对称性和去中心化。对称性(symmetry)简化了系统的配置和维护。去中心化是对对称性的延伸，可以避免master单点，同时方便集群scale out。</li>
+<li>Map-Reduce：分而治之；移动数据不如移动计算。将计算尽量调度到与存储节点在同一台物理机器上的计算节点上进行，这称之为本地化计算。本地化计算是计算调度的一种重要优化。</li>
+<li>Gossip协议：节点管理</li>
+<li>Lease机制：</li>
+</ul>
+<h2 id="consistent-hashing：一致性哈希，解决数据均衡分布问题"><a href="#consistent-hashing：一致性哈希，解决数据均衡分布问题" class="headerlink" title="consistent hashing：一致性哈希，解决数据均衡分布问题"></a>consistent hashing：一致性哈希，解决数据均衡分布问题</h2><h3 id="普通hash"><a href="#普通hash" class="headerlink" title="普通hash()"></a>普通hash()</h3><p>我们通常使用的hash算法是hash() mod n，但是如果发生某个节点失效时，无法快速切换到其他节点。为了解决单点故障的问题，我们为每个节点都增加一个备用节点，当某个节点失效时，就自动切换到备用节点上，类似于数据库的master和slave。但是依然无法解决增加或删除节点后，需要做hash重分布的问题，也就是无法动态增删节点。这时就引入了一致性hash的概念 ，将所有的节点分布到一个hash环上，每个请求都落在这个hash环上的某个位置，只需要按照顺时针方向找到的第一个节点，就是自己需要的服务节点。当某个节点发生故障时，只需要在环上找到下一个可用节点即可。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E5%B8%B8%E7%94%A8%E6%80%9D%E6%83%B3%E5%92%8C%E6%8A%80%E6%9C%AF%E6%80%BB%E7%BB%93/1.jpg" alt=""></p>
+<p>一致性hash算法最常用于分布式cache中，比如注意的memcached。Dynamo也用其作为数据分布算法，并且对一致性算法进行了改进，提出了基于虚拟节点的改进算法，其核心思路是引入虚拟节点，每个虚拟节点都有一个对应的物理节点，而每个物理节点可以对应若干个虚拟节点。</p>
+<p>关于一致性hash的更多内容，可以参考笔者另一篇博文：<a href="http://blog.arganzheng.me/posts/thinking-in-distributed-systems.html" target="_blank" rel="external">Memcached的分布式算法学习</a>。</p>
+<p>这篇文章也可以看看：<a href="http://timyang.net/architecture/consistent-hashing-practice/" target="_blank" rel="external">某分布式应用实践一致性哈希的一些问题</a></p>
+<h3 id="virtual-node"><a href="#virtual-node" class="headerlink" title="virtual node"></a>virtual node</h3><p>前面说过，有的Consistent Hashing的实现方法采用了虚拟节点的思想。使用一般的hash函数的话，服务器的映射地点的分布非常不均匀。因此，使用虚拟节点的思想，为每个物理节点（服务器）在continuum上分配100～200个点。这样就能抑制分布不均匀，最大限度地减小服务器增减时的缓存重新分布。</p>
+<h2 id="Quorum-W-R-gt-N：抽屉原理，数据一致性的另一种解决方案"><a href="#Quorum-W-R-gt-N：抽屉原理，数据一致性的另一种解决方案" class="headerlink" title="Quorum W+R&gt;N：抽屉原理，数据一致性的另一种解决方案"></a>Quorum W+R&gt;N：抽屉原理，数据一致性的另一种解决方案</h2><ul>
+<li>N: 复制的节点数，即一份数据被保存的份数。 </li>
+<li>R: 成功读操作的最小节点数，即每次读取成功需要的份数。 </li>
+<li>W: 成功写操作的最小节点数 ，即每次写成功需要的份数。</li>
+</ul>
+<p>所以 W+R&gt;N的意思是：<strong>对于有N份拷贝的分布式系统，写到W(W&lt;=N)份成功算写成功，读R(R&lt;=N)份数据算读成功。</strong></p>
+<p>这三个因素决定了可用性，一致性和分区容错性。W+R&gt;N可以保证数据的一致性(C)，W越大数据一致性越高。这个NWR模型把CAP的选择权交给了用户，让用户自己在功能，性能和成本效益之间进行权衡。</p>
+<p>对于一个分布式系统来说，N通常都大于3，也就说同一份数据需要保存在三个以上不同的节点上，以防止单点故障。W是成功写操作的最小节点数，这里的写成功可以理解为“同步”写，比如N=3，W=1，那么只要写成功一个节点就可以了，另外的两份数据是通过异步的方式复制的。R是成功读操作的最小节点数，读操作为什么要读多份数据呢？在分布式系统中，数据在不同的节点上可能存在着不一致的情况，我们可以选择读取多个节点上的不同版本，来达到增强一致性的目的。</p>
+<p>NWR模型的一些设置会造成脏数据和版本冲突问题，所以一般要引入vector clock算法来解决这个问题。</p>
+<p>需要保证系统中有max(N-W+1,N-R+1)个节点可用。</p>
+<p>关于NWR模型，建议阅读 <a href="http://coolshell.cn/articles/10910.html" target="_blank" rel="external">分布式系统的事务处理</a>，写的很通俗易懂。</p>
+<h2 id="vector-clock：时钟向量，多版本数据修改"><a href="#vector-clock：时钟向量，多版本数据修改" class="headerlink" title="vector clock：时钟向量，多版本数据修改"></a>vector clock：时钟向量，多版本数据修改</h2><p>参见 <a href="http://coolshell.cn/articles/10910.html" target="_blank" rel="external">分布式系统的事务处理</a>，写的很通俗易懂。</p>
+<h2 id="lease机制"><a href="#lease机制" class="headerlink" title="lease机制"></a>lease机制</h2><p>chubby、zookeeper 获得lease（租约）的节点得到系统的承诺：在有效期内数据/节点角色等是有效的，不会变化的。</p>
+<p>lease机制的特点：</p>
+<ul>
+<li>lease颁发过程只需要网络可以单向通信，同一个lease可以被颁发者不断重复向接受方发送。即使颁发者偶尔发送lease失败，颁发者也可以简单的通过重发的办法解决。</li>
+<li>机器宕机对lease机制的影响不大。如果颁发者宕机，则宕机的颁发者通常无法改变之前的承诺，不会影响lease的正确性。在颁发者机恢复后，如果颁发者恢复出了之前的lease 信息，颁发者可以继续遵守lease的承诺。如果颁发者无法恢复lease信息，则只需等待一个最大的lease超时时间就可以使得所有的lease都失效，从而不破坏lease机制。</li>
+<li>lease机制依赖于有效期，这就要求颁发者和接收者的时钟是同步的。<ul>
+<li>如果颁发者的时钟比接收者的时钟慢，则当接收者认为lease已经过期的时候，颁发者依旧认为lease有效。接收者可以用在lease到期前申请新的lease的方式解决这个问题。</li>
+<li>如果颁发者的时钟比接收者的时钟快，则当颁发者认为lease已经过期的时候，可能将lease颁发给其他节点，造成承诺失效，影响系统的正确性。对于这种时钟不同步，实践中的通常做法是将颁发者的有效期设置得比接收者的略大，只需大过时钟误差就可以避免对lease的有效性的影响。</li>
+</ul>
+</li>
+</ul>
+<p>工程中，常选择的lease时长是10秒级别，这是一个经过验证的经验值，实践中可以作为参考并综合选择合适的时长。</p>
+<h3 id="双主问题（脑裂问题）"><a href="#双主问题（脑裂问题）" class="headerlink" title="双主问题（脑裂问题）"></a>双主问题（脑裂问题）</h3><p>lease机制可以解决网络分区问题造成的“双主”问题，即所谓的“脑裂”现象。配置中心为一个节点发放lease，表示该节点可以作为primary节点工作。当配置中心发现primary有问题时，只需要等到前一个primary的lease过期，就可以安全地颁发新的lease给新的primary节点，而不会出现“双主”问题。 在实际系统中，若用一个中心节点作为配置中心发送lease也有很大的风险。实际系统总是使用多个中心节点互为副本，成为一个小的集群，该小集群具有高可用性，对外提供颁发lease的功能。chubby和zookeeper都是基于这样的设计。</p>
+<p>chubby一般有五台机器组成一个集群，可以部署成两地三机房。chubby内部的五台机器需要通过Paxos协议选取一个chubby master机器，其它机器是chubby slave，同一时刻只有一个chubby master。chubby相关的数据，比如锁信息，客户端的session信息等都需要同步到整个集群，采用半同步的做法，超过一半的机器成功就可以回复客户端。最后可以确保只有一个和原有的chubby master保持完全同步的chubby slave被选取为新的chubby master。</p>
+<h2 id="Gossip协议"><a href="#Gossip协议" class="headerlink" title="Gossip协议"></a>Gossip协议</h2><p>Gossip用于P2P系统中自治节点获悉对集群认识（如集群的节点状态，负载情况等）。 系统中的节点定期互相八卦，很快八卦就在整个系统传开了。 A、B两个节点八卦的方式主要是：A告诉B知道哪些人的什么八卦；B告诉A这些八卦里B知道哪些更新了；B更新A告诉他的八卦…… 说是自治系统，其实节点中还有一些种子节点。种子节点的作用主要是在有新节点加入系统时体现。新节点加入系统中，先与种子节点八卦，新节点获得系统信息，种子节点知道系统中多了新节点。其他节点定期与种子节点八卦的时候就知道有新节点加入了。 各个节点互相八卦的过程中，如果发现某个节点的状态很长时间都没更新，就认为该节点已经宕机了。</p>
+<p>Dynamo使用了Gossip协议来做会员和故障检测。</p>
+<h2 id="2PC、3PC、Paxos协议-分布式事务的解决方案"><a href="#2PC、3PC、Paxos协议-分布式事务的解决方案" class="headerlink" title="2PC、3PC、Paxos协议: 分布式事务的解决方案"></a>2PC、3PC、Paxos协议: 分布式事务的解决方案</h2><p>分布式事务很难做，所以除非必要，一般来说都是采用最终一致性来规避分布式事务。</p>
+<p>目前底层NoSQL存储系统实现分布式事务的只有Google的系统，它在Bigtable之上用Java语言开发了一个系统 <a href="http://research.google.com/pubs/pub36971.html" target="_blank" rel="external">Megastore</a>，实现了两阶段锁，并通过Chubby来避免两阶段锁协调者宕机带来的问题。Megastore实现目前只有简单介绍，还没有相关论文。</p>
+<h2 id="2PC"><a href="#2PC" class="headerlink" title="2PC"></a>2PC</h2><p>实现简单，但是效率低，所有参与者需要block，throughput低；无容错，一个节点失败整个事务失败。如果第一阶段完成后，参与者在第二阶没有收到决策，那么数据结点会进入“不知所措”的状态，这个状态会block住整个事务。</p>
+<h3 id="3PC"><a href="#3PC" class="headerlink" title="3PC"></a>3PC</h3><p>改进版的2PC，把2PC的第一个段break成了两段: 询问，然后再锁资源，最后真正提交。3PC的核心理念是：在询问的时候并不锁定资源，除非所有人都同意了，才开始锁资源。</p>
+<p>3PC比2PC的好处是，如果结点处在P状态（PreCommit）的时候发生了Fail/Timeout的问题，3PC可以继续直接把状态变成C状态（Commit），而2PC则不知所措。</p>
+<p>不过3PC实现比较困难，而且无法处理网络分离问题。如果preCommit消息发送后两个机房断开，这时候coordinator所在的机房会abort，剩余的participant会commit。</p>
+<h3 id="Paxos"><a href="#Paxos" class="headerlink" title="Paxos"></a>Paxos</h3><p>Paxos的目的是让整个集群的结点对某个值的变更达成一致。Paxos算法是一种基于消息传递的一致性算法。Paxos算法基本上来说是个民主选举的算法——大多数的决定会成个整个集群的统一决定。</p>
+<p>任何一个点都可以提出要修改某个数据的提案，是否通过这个提案取决于这个集群中是否有超过半数的结点同意（所以Paxos算法需要集群中的结点是单数）。这个是Paxos相对于2PC和3PC最大的区别，在2f+1个节点的集群中，允许有f个节点不可用。</p>
+<p>Paxos的分布式民主选举方式，除了保证数据变更的一致性之外，还常用于单点切换，比如Master选举。</p>
+<p>Paxos协议的特点就是难，both 理解 and 实现 :(</p>
+<p>关于2PC，3PC和Paxos，强烈推荐阅读 <a href="http://coolshell.cn/articles/10910.html" target="_blank" rel="external">分布式系统的事务处理</a>。</p>
+<p>目前大部分支付系统其实还是在2PC的基础上进行自我改进的。一般是引入一个差错处理器，进行差错协调（回滚或者失败处理）。</p>
+<h2 id="MVCC：多版本并发控制"><a href="#MVCC：多版本并发控制" class="headerlink" title="MVCC：多版本并发控制"></a>MVCC：多版本并发控制</h2><p>这个是很多RDMS存储引擎实现高并发修改的一个重要实现机制。具体可以参考：</p>
+<p><a href="http://coolshell.cn/articles/6790.html" target="_blank" rel="external">多版本并发控制(MVCC)在分布式系统中的应用</a><br><a href="http://vdisk.weibo.com/s/JXBPJ" target="_blank" rel="external">MVCC (Oracle, Innodb, Postgres).pdf</a></p>
+<h2 id="Map-Reduce思想"><a href="#Map-Reduce思想" class="headerlink" title="Map-Reduce思想"></a>Map-Reduce思想</h2><ol>
+<li>分而治之</li>
+<li>移动数据不如移动计算<br>如果计算节点和存储节点位于不同的物理机器则计算的数据需要通过网络传输，此种方式的开销很大。另一种思路是，将计算尽量调度到与存储节点在同一台物理机器上的计算节点上进行，这称之为本地化计算。本地化计算是计算调度的一种重要优化。</li>
+</ol>
+<h1 id="经典论文和分布式系统学习"><a href="#经典论文和分布式系统学习" class="headerlink" title="经典论文和分布式系统学习"></a>经典论文和分布式系统学习</h1><h2 id="Dynamo"><a href="#Dynamo" class="headerlink" title="Dynamo"></a>Dynamo</h2><h2 id="HBase"><a href="#HBase" class="headerlink" title="HBase"></a>HBase</h2><h2 id="LSM-Tree"><a href="#LSM-Tree" class="headerlink" title="LSM Tree"></a>LSM Tree</h2><p>LSM（Log Structured Merge Trees）是B+ Tree一种改进：</p>
+<ul>
+<li>牺牲了部分读性能，用来大幅提高写性能</li>
+<li>思路：拆分树<ul>
+<li>首先写WAL，然后记录数据到入到内存中，构建一颗有序子树(memstore)</li>
+<li>随着子树越来越大，内存的子树会flush到磁盘上(storefile)</li>
+<li>读取数据：必须遍历所有的有序子树（不知数据在哪棵子树）</li>
+<li>Compact：后台线程对磁盘中的子树进行归并，变成大树（子树多了读得慢）</li>
+</ul>
+</li>
+</ul>
+<p>事实上，lucene的索引机制也类似Hbase的LSM树。也是写的时候分别写在单独的segment，后台进行segement合并。</p>
+<h1 id="参考文档："><a href="#参考文档：" class="headerlink" title="参考文档："></a>参考文档：</h1><p><a href="http://www.hellodb.net/2010/04/nosql.html" target="_blank" rel="external">NoSQL漫谈</a><br><a href="http://timyang.net/distributed/multi-idc-consensus/" target="_blank" rel="external">多IDC的数据分布设计(一)</a><br><a href="http://coolshell.cn/articles/10910.html" target="_blank" rel="external">分布式系统的事务处理</a><br><a href="http://qing.blog.sina.com.cn/1765738567/693f08473300067j.html" target="_blank" rel="external">海量存储系列之四-单机事务处理</a><br>本人的一些技术方面的分享集合<br><a href="http://www.slideshare.net/schubertzhang/learning-from-google-megastore-part1-12149098" target="_blank" rel="external">Learning from google megastore (Part-1)</a><br>本文出自：<a href="http://kyle.xlau.org/" target="_blank" rel="external">http://kyle.xlau.org/</a>, 原文地址：<a href="http://arganzheng.me/posts/thinking-in-distributed-systems.html" target="_blank" rel="external">http://arganzheng.me/posts/thinking-in-distributed-systems.html</a>, 感谢原作者分享。</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/算法/" rel="tag"># 算法</a>
+          
+            <a href="/tags/转载/" rel="tag"># 转载</a>
+          
+            <a href="/tags/分布式/" rel="tag"># 分布式</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/20170427/concurrence_control_mvcc/" rel="next" title="多版本并发控制(MVCC)在分布式系统中的应用">
+                <i class="fa fa-chevron-left"></i> 多版本并发控制(MVCC)在分布式系统中的应用
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/20170427/algorithms_for_distributed_id/" rel="prev" title="实际项目中分布式ID生成算法">
+                实际项目中分布式ID生成算法 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/face.jpg"
+               alt="曙光" />
+          <p class="site-author-name" itemprop="name">曙光</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">25</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/zhaoshg" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a rel="external nofollow" href="http://www.nongrj.com/" title="农仁街" target="_blank">农仁街</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#分布式系统的难点"><span class="nav-number">1.</span> <span class="nav-text">分布式系统的难点</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#网络因素"><span class="nav-number">1.1.</span> <span class="nav-text">网络因素</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#鱼与熊掌不可兼得——CAP定律"><span class="nav-number">1.2.</span> <span class="nav-text">鱼与熊掌不可兼得——CAP定律</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#一致性模型"><span class="nav-number">1.3.</span> <span class="nav-text">一致性模型</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#分布式系统常用技术和应用场景"><span class="nav-number">2.</span> <span class="nav-text">分布式系统常用技术和应用场景</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#consistent-hashing：一致性哈希，解决数据均衡分布问题"><span class="nav-number">2.1.</span> <span class="nav-text">consistent hashing：一致性哈希，解决数据均衡分布问题</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#普通hash"><span class="nav-number">2.1.1.</span> <span class="nav-text">普通hash()</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#virtual-node"><span class="nav-number">2.1.2.</span> <span class="nav-text">virtual node</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Quorum-W-R-gt-N：抽屉原理，数据一致性的另一种解决方案"><span class="nav-number">2.2.</span> <span class="nav-text">Quorum W+R>N：抽屉原理，数据一致性的另一种解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#vector-clock：时钟向量，多版本数据修改"><span class="nav-number">2.3.</span> <span class="nav-text">vector clock：时钟向量，多版本数据修改</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#lease机制"><span class="nav-number">2.4.</span> <span class="nav-text">lease机制</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#双主问题（脑裂问题）"><span class="nav-number">2.4.1.</span> <span class="nav-text">双主问题（脑裂问题）</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Gossip协议"><span class="nav-number">2.5.</span> <span class="nav-text">Gossip协议</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2PC、3PC、Paxos协议-分布式事务的解决方案"><span class="nav-number">2.6.</span> <span class="nav-text">2PC、3PC、Paxos协议: 分布式事务的解决方案</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2PC"><span class="nav-number">2.7.</span> <span class="nav-text">2PC</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3PC"><span class="nav-number">2.7.1.</span> <span class="nav-text">3PC</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#Paxos"><span class="nav-number">2.7.2.</span> <span class="nav-text">Paxos</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#MVCC：多版本并发控制"><span class="nav-number">2.8.</span> <span class="nav-text">MVCC：多版本并发控制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Map-Reduce思想"><span class="nav-number">2.9.</span> <span class="nav-text">Map-Reduce思想</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#经典论文和分布式系统学习"><span class="nav-number">3.</span> <span class="nav-text">经典论文和分布式系统学习</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Dynamo"><span class="nav-number">3.1.</span> <span class="nav-text">Dynamo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#HBase"><span class="nav-number">3.2.</span> <span class="nav-text">HBase</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#LSM-Tree"><span class="nav-number">3.3.</span> <span class="nav-text">LSM Tree</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文档："><span class="nav-number">4.</span> <span class="nav-text">参考文档：</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" align="center">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">曙光</span>
+</div>
+<!--
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+-->
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fastclick/1.0.6/fastclick.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+    
+    <script>
+      var cloudTieConfig = {
+        url: document.location.href, 
+        sourceId: "",
+        productKey: "66baac132d9b4e38acd9a0a664710c6f",
+        target: "cloud-tie-wrapper"
+      };
+    </script>
+    <script src="https://img1.ws.126.net/f2e/tie/yun/sdk/loader.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("HofnnMS813HyOHPUrN3wmNkQ-gzGzoHsz", "mL2pwohDw3hUOwrR9jaBs553");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+
+</body>
+</html>

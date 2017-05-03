@@ -1,0 +1,1158 @@
+<!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="荆棘之路" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="Dockerfile命令介绍及实例基础镜像可以用于创建Docker容器。镜像可以非常基础，仅仅包含操作系统；也可以非常丰富，包含灵巧的应用栈，随时可以发布。当你在使用Docker构建镜像的时候，每一个命令都会在前一个命令的基础上形成一个新层。这些基础镜像可以用于创建新的容器。本篇文章将手把手教您如何从基础镜像，一步一步，一层一层的从Dockerfile构建容器的过程。">
+<meta name="keywords" content="docker,dockerfile">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Dockerfile命令介绍及实例">
+<meta property="og:url" content="http://www.javacn.top/20170420/into_dockerfile_example/index.html">
+<meta property="og:site_name" content="荆棘之路">
+<meta property="og:description" content="Dockerfile命令介绍及实例基础镜像可以用于创建Docker容器。镜像可以非常基础，仅仅包含操作系统；也可以非常丰富，包含灵巧的应用栈，随时可以发布。当你在使用Docker构建镜像的时候，每一个命令都会在前一个命令的基础上形成一个新层。这些基础镜像可以用于创建新的容器。本篇文章将手把手教您如何从基础镜像，一步一步，一层一层的从Dockerfile构建容器的过程。">
+<meta property="og:updated_time" content="2017-05-03T03:06:46.584Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Dockerfile命令介绍及实例">
+<meta name="twitter:description" content="Dockerfile命令介绍及实例基础镜像可以用于创建Docker容器。镜像可以非常基础，仅仅包含操作系统；也可以非常丰富，包含灵巧的应用栈，随时可以发布。当你在使用Docker构建镜像的时候，每一个命令都会在前一个命令的基础上形成一个新层。这些基础镜像可以用于创建新的容器。本篇文章将手把手教您如何从基础镜像，一步一步，一层一层的从Dockerfile构建容器的过程。">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.javacn.top/20170420/into_dockerfile_example/"/>
+
+
+
+
+
+  <title> Dockerfile命令介绍及实例 | 荆棘之路 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-98173663-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?0a667b2d82398abb1dcb34b2b09ca44a";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">荆棘之路</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Just Do It !</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off"
+             placeholder="搜索..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170420/into_dockerfile_example/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                Dockerfile命令介绍及实例
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-20T14:34:18+08:00">
+                2017-04-20
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/docker/" itemprop="url" rel="index">
+                    <span itemprop="name">docker</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a class="cloud-tie-join-count" href="/20170420/into_dockerfile_example/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count join-count" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/20170420/into_dockerfile_example/" class="leancloud_visitors" data-flag-title="Dockerfile命令介绍及实例">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  2,519
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  12
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <h1 id="Dockerfile命令介绍及实例"><a href="#Dockerfile命令介绍及实例" class="headerlink" title="Dockerfile命令介绍及实例"></a>Dockerfile命令介绍及实例</h1><p>基础镜像可以用于创建Docker容器。镜像可以非常基础，仅仅包含操作系统；也可以非常丰富，包含灵巧的应用栈，随时可以发布。当你在使用Docker构建镜像的时候，每一个命令都会在前一个命令的基础上形成一个新层。这些基础镜像可以用于创建新的容器。本篇文章将手把手教您如何从基础镜像，一步一步，一层一层的从Dockerfile构建容器的过程。</p>
+<a id="more"></a>
+<h2 id="Docker简介"><a href="#Docker简介" class="headerlink" title="Docker简介"></a>Docker简介</h2><p>Docker项目提供了构建在Linux内核功能之上，协同在一起的的高级工具。其目标是帮助开发和运维人员更容易地跨系统跨主机交付应用程序和他们的依赖。Docker通过Docker容器，一个安全的，基于轻量级容器的环境，来实现这个目标。这些容器由镜像创建，而镜像可以通过命令行手工创建或 者通过Dockerfile自动创建。</p>
+<h2 id="Dockerfile"><a href="#Dockerfile" class="headerlink" title="Dockerfile"></a>Dockerfile</h2><p>Dockerfile是由一系列命令和参数构成的脚本，这些命令应用于基础镜像并最终创建一个新的镜像。它们简化了从头到尾的流程并极大的简化了部署工作。Dockerfile从FROM命令开始，紧接着跟随者各种方法，命令和参数。其产出为一个新的可以用于创建容器的镜像。</p>
+<h1 id="Dockerfile-语法"><a href="#Dockerfile-语法" class="headerlink" title="Dockerfile 语法"></a>Dockerfile 语法</h1><p>在我们深入讨论Dockerfile之前，让我们快速过一下Dockerfile的语法和它们的意义。</p>
+<h2 id="什么是语法？"><a href="#什么是语法？" class="headerlink" title="什么是语法？"></a>什么是语法？</h2><p>非常简单，在编程中，语法意味着一个调用命令，输入参数去让应用执行程序的文法结构。这些语法被规则或明或暗的约束。程序员遵循语法规范以和计算机 交互。如果一段程序语法不正确，计算机将无法识别。Dockerfile使用简单的，清楚的和干净的语法结构，极为易于使用。这些语法可以自我释义，支持注释。</p>
+<h2 id="Dockerfile-语法示例"><a href="#Dockerfile-语法示例" class="headerlink" title="Dockerfile 语法示例"></a>Dockerfile 语法示例</h2><p>Dockerfile语法由两部分构成，注释和命令+参数</p>
+<h2 id="Dockerfile-命令"><a href="#Dockerfile-命令" class="headerlink" title="Dockerfile 命令"></a>Dockerfile 命令</h2><p>Dockerfile有十几条命令可用于构建镜像，下文将简略介绍这些命令。</p>
+<h3 id="ADD"><a href="#ADD" class="headerlink" title="ADD"></a>ADD</h3><p>ADD命令有两个参数，源和目标。它的基本作用是从源系统的文件系统上复制文件到目标容器的文件系统。如果源是一个URL，那该URL的内容将被下载并复制到容器中。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: ADD [source directory or URL] [destination directory]</span></div><div class="line"><span class="string">ADD</span> <span class="string">/my_app_folder</span> <span class="string">/my_app_folder</span></div></pre></td></tr></table></figure></p>
+<h3 id="CMD"><a href="#CMD" class="headerlink" title="CMD"></a>CMD</h3><p>和RUN命令相似，CMD可以用于执行特定的命令。和RUN不同的是，这些命令不是在镜像构建的过程中执行的，而是在用镜像构建容器后被调用。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage 1: CMD application "argument", "argument", ..</span></div><div class="line"><span class="string">CMD</span> <span class="string">"echo"</span> <span class="string">"Hello docker!"</span></div></pre></td></tr></table></figure></p>
+<h3 id="ENTRYPOINT"><a href="#ENTRYPOINT" class="headerlink" title="ENTRYPOINT"></a>ENTRYPOINT</h3><p>ENTRYPOINT 帮助你配置一个容器使之可执行化，如果你结合CMD命令和ENTRYPOINT命令，你可以从CMD命令中移除“application”而仅仅保留参数，参数将传递给ENTRYPOINT命令。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: ENTRYPOINT application "argument", "argument", ..</span></div><div class="line"><span class="comment"># Remember: arguments are optional. They can be provided by CMD</span></div><div class="line"><span class="comment"># or during the creation of a container.</span></div><div class="line"><span class="string">ENTRYPOINT</span> <span class="string">echo</span></div><div class="line"><span class="comment"># Usage example with CMD:</span></div><div class="line"><span class="comment"># Arguments set with CMD can be overridden during *run*</span></div><div class="line"><span class="string">CMD</span> <span class="string">"Hello docker!"</span></div><div class="line"><span class="string">ENTRYPOINT</span> <span class="string">echo</span></div></pre></td></tr></table></figure></p>
+<h3 id="ENV"><a href="#ENV" class="headerlink" title="ENV"></a>ENV</h3><p>ENV命令用于设置环境变量。这些变量以”key=value”的形式存在，并可以在容器内被脚本或者程序调用。这个机制给在容器中运行应用带来了极大的便利。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: ENV key value</span></div><div class="line"><span class="string">ENV</span> <span class="string">SERVER_WORKS</span> <span class="number">4</span></div></pre></td></tr></table></figure></p>
+<h3 id="EXPOSE"><a href="#EXPOSE" class="headerlink" title="EXPOSE"></a>EXPOSE</h3><p>EXPOSE用来指定端口，使容器内的应用可以通过端口和外界交互。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: EXPOSE [port]</span></div><div class="line"><span class="string">EXPOSE</span> <span class="number">8080</span></div></pre></td></tr></table></figure></p>
+<h3 id="FROM"><a href="#FROM" class="headerlink" title="FROM"></a>FROM</h3><p>FROM命令可能是最重要的Dockerfile命令。改命令定义了使用哪个基础镜像启动构建流程。基础镜像可以为任意镜 像。如果基础镜像没有被发现，Docker将试图从Docker image index来查找该镜像。FROM命令必须是Dockerfile的首个命令。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: FROM [image name]</span></div><div class="line"><span class="string">FROM</span> <span class="string">ubuntu</span></div></pre></td></tr></table></figure></p>
+<h3 id="MAINTAINER"><a href="#MAINTAINER" class="headerlink" title="MAINTAINER"></a>MAINTAINER</h3><p>我建议这个命令放在Dockerfile的起始部分，虽然理论上它可以放置于Dockerfile的任意位置。这个命令用于声明作者，并应该放在FROM的后面。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: MAINTAINER [name]</span></div><div class="line"><span class="string">MAINTAINER</span> <span class="string">authors_name</span></div></pre></td></tr></table></figure></p>
+<h3 id="RUN"><a href="#RUN" class="headerlink" title="RUN"></a>RUN</h3><p>RUN命令是Dockerfile执行命令的核心部分。它接受命令作为参数并用于创建镜像。不像CMD命令，RUN命令用于创建镜像（在之前commit的层之上形成新的层）。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: RUN [command]</span></div><div class="line"><span class="string">RUN</span> <span class="string">aptitude</span> <span class="string">install</span> <span class="bullet">-y</span> <span class="string">riak</span></div></pre></td></tr></table></figure></p>
+<h3 id="USER"><a href="#USER" class="headerlink" title="USER"></a>USER</h3><p>USER命令用于设置运行容器的UID。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: USER [UID]</span></div><div class="line"><span class="string">USER</span> <span class="number">751</span></div></pre></td></tr></table></figure></p>
+<h3 id="VOLUME"><a href="#VOLUME" class="headerlink" title="VOLUME"></a>VOLUME</h3><p>VOLUME命令用于让你的容器访问宿主机上的目录。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: VOLUME ["/dir_1", "/dir_2" ..]</span></div><div class="line"><span class="string">VOLUME</span> <span class="string">["/my_files"]</span></div></pre></td></tr></table></figure></p>
+<h3 id="WORKDIR"><a href="#WORKDIR" class="headerlink" title="WORKDIR"></a>WORKDIR</h3><p>WORKDIR命令用于设置CMD指明的命令的运行目录。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Usage: WORKDIR /path</span></div><div class="line"><span class="string">WORKDIR</span> <span class="string">~/</span></div></pre></td></tr></table></figure></p>
+<h1 id="如何使用Dockerfiles"><a href="#如何使用Dockerfiles" class="headerlink" title="如何使用Dockerfiles"></a>如何使用Dockerfiles</h1><p>使用Dockerfiles和手工使用Docker Daemon运行命令一样简单。脚本运行后输出为新的镜像ID。<br><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Build an image using the Dockerfile at current location</span></div><div class="line"><span class="comment"># Example: sudo docker build -t [name] .</span></div><div class="line"><span class="variable">$sudo</span> docker build -t my_mongodb .</div></pre></td></tr></table></figure></p>
+<h2 id="Dockerfile-示例一：创建一个最小的带glibc的linux镜像"><a href="#Dockerfile-示例一：创建一个最小的带glibc的linux镜像" class="headerlink" title="Dockerfile 示例一：创建一个最小的带glibc的linux镜像"></a>Dockerfile 示例一：创建一个最小的带glibc的linux镜像</h2><p>在这部分中，我们讲一步一步创建一个Dockfile，这个Dockerfile可用于构建一个最小的linux容器。</p>
+<h3 id="创建一个Dockerfile"><a href="#创建一个Dockerfile" class="headerlink" title="创建一个Dockerfile"></a>创建一个Dockerfile</h3><p>使用nano文本编辑器，让我们创建Dockerfile。<br><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$sudo</span> vi Dockerfile</div></pre></td></tr></table></figure></p>
+<h3 id="定义文件和它的目的"><a href="#定义文件和它的目的" class="headerlink" title="定义文件和它的目的"></a>定义文件和它的目的</h3><p>让阅读者明确Dockerfile的目的永远是必要的。为此，我们通常从注释开始写Dockerfile。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div></pre></td><td class="code"><pre><div class="line"><span class="comment">############################################################</span></div><div class="line"><span class="comment"># Dockerfile to build a min linux based on alpine and glibc</span></div><div class="line"><span class="comment"># Based on alpine</span></div><div class="line"><span class="comment">############################################################</span></div><div class="line"><span class="comment">#设置基础镜像 </span></div><div class="line"><span class="comment"># Set the base image to alpine</span></div><div class="line"><span class="string">FROM</span> <span class="attr">alpine:3.5</span></div><div class="line"><span class="comment">#定义作者</span></div><div class="line"><span class="comment"># File Author</span></div><div class="line"><span class="string">MAINTAINER</span> <span class="string">zhaoshg</span></div><div class="line"></div><div class="line"><span class="comment"># Here we install GNU libc (aka glibc) and set C.UTF-8 locale as default.</span></div><div class="line"><span class="string">RUN</span> <span class="string">ALPINE_GLIBC_BASE_URL="https://github.com/sgerrand/alpine-pkg-glibc/releases/download"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">ALPINE_GLIBC_PACKAGE_VERSION="2.25-r0"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">ALPINE_GLIBC_BASE_PACKAGE_FILENAME="glibc-$ALPINE_GLIBC_PACKAGE_VERSION.apk"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">ALPINE_GLIBC_BIN_PACKAGE_FILENAME="glibc-bin-$ALPINE_GLIBC_PACKAGE_VERSION.apk"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">ALPINE_GLIBC_I18N_PACKAGE_FILENAME="glibc-i18n-$ALPINE_GLIBC_PACKAGE_VERSION.apk"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">apk</span> <span class="string">add</span> <span class="bullet">--no-cache</span> <span class="bullet">--virtual=.build-dependencies</span> <span class="string">wget</span> <span class="string">ca-certificates</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">wget</span> <span class="string">\</span></div><div class="line">        <span class="string">"https://raw.githubusercontent.com/andyshinn/alpine-pkg-glibc/master/sgerrand.rsa.pub"</span> <span class="string">\</span></div><div class="line"><span class="bullet">        -</span><span class="string">O</span> <span class="string">"/etc/apk/keys/sgerrand.rsa.pub"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">wget</span> <span class="string">\</span></div><div class="line">        <span class="string">"$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_BASE_PACKAGE_FILENAME"</span> <span class="string">\</span></div><div class="line">        <span class="string">"$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_BIN_PACKAGE_FILENAME"</span> <span class="string">\</span></div><div class="line">        <span class="string">"$ALPINE_GLIBC_BASE_URL/$ALPINE_GLIBC_PACKAGE_VERSION/$ALPINE_GLIBC_I18N_PACKAGE_FILENAME"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">apk</span> <span class="string">add</span> <span class="bullet">--no-cache</span> <span class="string">\</span></div><div class="line">        <span class="string">"$ALPINE_GLIBC_BASE_PACKAGE_FILENAME"</span> <span class="string">\</span></div><div class="line">        <span class="string">"$ALPINE_GLIBC_BIN_PACKAGE_FILENAME"</span> <span class="string">\</span></div><div class="line">        <span class="string">"$ALPINE_GLIBC_I18N_PACKAGE_FILENAME"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">\</span></div><div class="line">    <span class="string">rm</span> <span class="string">"/etc/apk/keys/sgerrand.rsa.pub"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">/usr/glibc-compat/bin/localedef</span> <span class="bullet">--force</span> <span class="bullet">--inputfile</span> <span class="string">POSIX</span> <span class="bullet">--charmap</span> <span class="string">UTF-8</span> <span class="string">C.UTF-8</span> <span class="string">||</span> <span class="literal">true</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">echo</span> <span class="string">"export LANG=C.UTF-8"</span> <span class="string">&gt; /etc/profile.d/locale.sh &amp;&amp; \</span></div><div class="line">    \</div><div class="line">    apk del glibc-i18n &amp;&amp; \</div><div class="line">    \</div><div class="line">    rm "/root/.wget-hsts" &amp;&amp; \</div><div class="line">    apk del .build-dependencies &amp;&amp; \</div><div class="line">    rm \</div><div class="line">        "$ALPINE_GLIBC_BASE_PACKAGE_FILENAME" \</div><div class="line">        "$ALPINE_GLIBC_BIN_PACKAGE_FILENAME" \</div><div class="line">        "$ALPINE_GLIBC_I18N_PACKAGE_FILENAME"</div><div class="line">ENV LANG=C.UTF-8</div></pre></td></tr></table></figure></p>
+<p>保存Dockerfile。</p>
+<h3 id="构建镜像"><a href="#构建镜像" class="headerlink" title="构建镜像"></a>构建镜像</h3><p>使用上述的Dockerfile，我们已经可以开始构建镜像<br><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$sudo</span> docker build -t my_alpine .</div></pre></td></tr></table></figure></p>
+<h2 id="Dockerfile-示例二：创建一个最小化的JDK镜像"><a href="#Dockerfile-示例二：创建一个最小化的JDK镜像" class="headerlink" title="Dockerfile 示例二：创建一个最小化的JDK镜像"></a>Dockerfile 示例二：创建一个最小化的JDK镜像</h2><h3 id="简述"><a href="#简述" class="headerlink" title="简述"></a>简述</h3><p>目前JDK官方并不提供docker镜像，只有OpenJDK镜像提供，但是遇到必须使用JDK的情况时，我们就只能自己构建了。<br>和上个例子不同，我们使用上个例子中构建好的镜像，运用FROM命令和MAINTAINER命令<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div></pre></td><td class="code"><pre><div class="line"><span class="comment">############################################################</span></div><div class="line"><span class="comment"># Dockerfile to build min JDK</span></div><div class="line"><span class="comment"># Based on my_alpine</span></div><div class="line"><span class="comment">############################################################</span></div><div class="line"><span class="comment"># Set the base image to Ubuntu</span></div><div class="line"><span class="string">FROM</span> <span class="string">my_alpine</span></div><div class="line"><span class="comment"># File Author </span></div><div class="line"><span class="string">MAINTAINER</span> <span class="string">zhaoshg@qq.com</span></div><div class="line"><span class="string">ENV</span> <span class="string">JAVA_VERSION=8</span> <span class="string">\</span></div><div class="line">    <span class="string">JAVA_UPDATE=121</span> <span class="string">\</span></div><div class="line">    <span class="string">JAVA_BUILD=13</span> <span class="string">\</span></div><div class="line">    <span class="string">JAVA_PATH=e9e7ea248e2c4826b92b3f075a80e441</span> <span class="string">\</span></div><div class="line">    <span class="string">JAVA_HOME="/usr/lib/jvm/default-jvm"</span></div><div class="line"><span class="comment">#安装一些工具并下载JDK进行安装</span></div><div class="line"><span class="comment">#在安装完毕后删除一些不必要的文件进行精简</span></div><div class="line"><span class="comment">#删除之前安装的工具</span></div><div class="line"><span class="string">RUN</span> <span class="string">apk</span> <span class="string">add</span> <span class="bullet">--no-cache</span> <span class="bullet">--virtual=build-dependencies</span> <span class="string">wget</span> <span class="string">ca-certificates</span> <span class="string">unzip</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">cd</span> <span class="string">"/tmp"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">wget</span> <span class="bullet">--header</span> <span class="string">"Cookie: oraclelicense=accept-securebackup-cookie;"</span> <span class="string">\</span></div><div class="line">        <span class="string">"http://download.oracle.com/otn-pub/java/jdk/$&#123;JAVA_VERSION&#125;u$&#123;JAVA_UPDATE&#125;-b$&#123;JAVA_BUILD&#125;/$&#123;JAVA_PATH&#125;/jdk-$&#123;JAVA_VERSION&#125;u$&#123;JAVA_UPDATE&#125;-linux-x64.tar.gz"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">tar</span> <span class="bullet">-xzf</span> <span class="string">"jdk-$&#123;JAVA_VERSION&#125;u$&#123;JAVA_UPDATE&#125;-linux-x64.tar.gz"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">mkdir</span> <span class="bullet">-p</span> <span class="string">"/usr/lib/jvm"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">mv</span> <span class="string">"/tmp/jdk1.$&#123;JAVA_VERSION&#125;.0_$&#123;JAVA_UPDATE&#125;"</span> <span class="string">"/usr/lib/jvm/java-$&#123;JAVA_VERSION&#125;-oracle"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">ln</span> <span class="bullet">-s</span> <span class="string">"java-$&#123;JAVA_VERSION&#125;-oracle"</span> <span class="string">"$JAVA_HOME"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">ln</span> <span class="bullet">-s</span> <span class="string">"$JAVA_HOME/bin/"</span><span class="string">*</span> <span class="string">"/usr/bin/"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">rm</span> <span class="bullet">-rf</span> <span class="string">"$JAVA_HOME/"</span><span class="string">*src.zip</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">rm</span> <span class="bullet">-rf</span> <span class="string">"$JAVA_HOME/lib/missioncontrol"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/lib/visualvm"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/lib/"</span><span class="string">*javafx*</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/plugin.jar"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/ext/jfxrt.jar"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/javaws"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/javaws.jar"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/desktop"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/plugin"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/"</span><span class="string">deploy*</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/"</span><span class="string">*javafx*</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/"</span><span class="string">*jfx*</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/amd64/libdecora_sse.so"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/amd64/"</span><span class="string">libprism_*.so</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/amd64/libfxplugins.so"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/amd64/libglass.so"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/amd64/libgstreamer-lite.so"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/amd64/"</span><span class="string">libjavafx*.so</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/amd64/"</span><span class="string">libjfx*.so</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">rm</span> <span class="bullet">-rf</span> <span class="string">"$JAVA_HOME/jre/bin/jjs"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/keytool"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/orbd"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/pack200"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/policytool"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/rmid"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/rmiregistry"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/servertool"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/tnameserv"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/bin/unpack200"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/ext/nashorn.jar"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/jfr.jar"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/jfr"</span> <span class="string">\</span></div><div class="line">           <span class="string">"$JAVA_HOME/jre/lib/oblique-fonts"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">wget</span> <span class="bullet">--header</span> <span class="string">"Cookie: oraclelicense=accept-securebackup-cookie;"</span> <span class="string">\</span></div><div class="line">        <span class="string">"http://download.oracle.com/otn-pub/java/jce/$&#123;JAVA_VERSION&#125;/jce_policy-$&#123;JAVA_VERSION&#125;.zip"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">unzip</span> <span class="bullet">-jo</span> <span class="bullet">-d</span> <span class="string">"$&#123;JAVA_HOME&#125;/jre/lib/security"</span> <span class="string">"jce_policy-$&#123;JAVA_VERSION&#125;.zip"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">rm</span> <span class="string">"$&#123;JAVA_HOME&#125;/jre/lib/security/README.txt"</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">apk</span> <span class="string">del</span> <span class="string">build-dependencies</span> <span class="string">&amp;&amp;</span> <span class="string">\</span></div><div class="line">    <span class="string">rm</span> <span class="string">"/tmp/"</span><span class="string">*</span></div></pre></td></tr></table></figure></p>
+<p>保存 dockfile。</p>
+<p>使用Dockerfile构建JDK镜像</p>
+<h2 id="Dockerfile-示例三：创建一个最小的带JDK的tomcat镜像"><a href="#Dockerfile-示例三：创建一个最小的带JDK的tomcat镜像" class="headerlink" title="Dockerfile 示例三：创建一个最小的带JDK的tomcat镜像"></a>Dockerfile 示例三：创建一个最小的带JDK的tomcat镜像</h2><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div></pre></td><td class="code"><pre><div class="line"><span class="comment">#使用之前的JDK镜像</span></div><div class="line"><span class="string">FROM</span> <span class="string">FROM</span> <span class="string">registry.cn-hangzhou.aliyuncs.com/zhaoshg1984/jdk:min</span></div><div class="line"></div><div class="line"><span class="comment"># File Author / Maintainer</span></div><div class="line"><span class="string">MAINTAINER</span> <span class="string">zhaoshg@qq.com</span></div><div class="line"></div><div class="line"><span class="comment">#set envs</span></div><div class="line"><span class="string">ENV</span> <span class="string">JAVA_HOME="/usr/lib/jvm/default-jvm"</span></div><div class="line"><span class="string">ENV</span> <span class="string">CATALINA_HOME</span> <span class="string">/usr/local/tomcat</span></div><div class="line"><span class="string">ENV</span> <span class="string">PATH</span> <span class="string">$CATALINA_HOME/bin:$PATH</span></div><div class="line"><span class="string">RUN</span> <span class="string">mkdir</span> <span class="bullet">-p</span> <span class="string">"$CATALINA_HOME"</span></div><div class="line"><span class="string">WORKDIR</span> <span class="string">$CATALINA_HOME</span></div><div class="line"><span class="string">ENV</span> <span class="string">TOMCAT_NATIVE_LIBDIR</span> <span class="string">$CATALINA_HOME/native-jni-lib</span></div><div class="line"><span class="string">ENV</span> <span class="string">LD_LIBRARY_PATH</span> <span class="string">$&#123;LD_LIBRARY_PATH:+$LD_LIBRARY_PATH:&#125;$TOMCAT_NATIVE_LIBDIR</span></div><div class="line"></div><div class="line"><span class="string">RUN</span> <span class="string">apk</span> <span class="string">add</span> <span class="bullet">--no-cache</span> <span class="string">gnupg</span> <span class="string">curl</span></div><div class="line"></div><div class="line"><span class="string">ENV</span> <span class="string">GPG_KEYS</span> <span class="number">05</span><span class="string">AB33110949707C93A279E3D3EFE6B686867BA6</span> <span class="number">07E48665</span><span class="string">A34DCAFAE522E5E6266191C37C037D42</span> <span class="number">47309207</span><span class="string">D818FFD8DCD3F83F1931D684307A10A5</span> <span class="number">541</span><span class="string">FBE7D8F78B25E055DDEE13C370389288584E7</span> <span class="number">61</span><span class="string">B832AC2F1C5A90F0F9B00A1C506407564C17A3</span> <span class="number">713</span><span class="string">DA88BE50911535FE716F5208B0AB1D63011C7</span> <span class="number">79</span><span class="string">F7026C690BAA50B92CD8B66A3AD3F4F22C4FED</span> <span class="number">9</span><span class="string">BA44C2621385CB966EBA586F72C284D731FABEE</span> <span class="string">A27677289986DB50844682F8ACB77FC2E86E29AC</span> <span class="string">A9C5DF4D22E99998D9875A5110C01C5A2F6059E7</span> <span class="string">DCFD35E0BF8CA7344752DE8B6FB21E8933C60243</span> <span class="string">F3A04C595DB5B6A5F1ECA43E3B7BBB100D811BBE</span> <span class="string">F7DA48BB64BCB84ECBA7EE6935CD23C10D498E23</span></div><div class="line"><span class="string">RUN</span> <span class="string">set</span> <span class="bullet">-ex;</span> <span class="string">\</span></div><div class="line">    <span class="string">for</span> <span class="string">key</span> <span class="string">in</span> <span class="string">$GPG_KEYS;</span> <span class="string">do</span> <span class="string">\</span></div><div class="line">        <span class="string">gpg</span> <span class="bullet">--keyserver</span> <span class="string">keyserver.ubuntu.com</span> <span class="bullet">--recv-keys</span> <span class="string">"$key"</span><span class="string">;</span> <span class="string">\</span></div><div class="line">    <span class="string">done</span></div><div class="line"></div><div class="line"><span class="string">ENV</span> <span class="string">TOMCAT_MAJOR</span> <span class="number">8</span></div><div class="line"><span class="string">ENV</span> <span class="string">TOMCAT_VERSION</span> <span class="number">8.0</span><span class="number">.43</span></div><div class="line"></div><div class="line"><span class="comment"># https://issues.apache.org/jira/browse/INFRA-8753?focusedCommentId=14735394#comment-14735394</span></div><div class="line"><span class="string">ENV</span> <span class="string">TOMCAT_TGZ_URL</span> <span class="attr">https://www.apache.org/dyn/closer.cgi?action=download&amp;filename=tomcat/tomcat-$TOMCAT_MAJOR/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz</span></div><div class="line"><span class="comment"># not all the mirrors actually carry the .asc files :'(</span></div><div class="line"><span class="string">ENV</span> <span class="string">TOMCAT_ASC_URL</span> <span class="attr">https://www.apache.org/dist/tomcat/tomcat-$TOMCAT_MAJOR/v$TOMCAT_VERSION/bin/apache-tomcat-$TOMCAT_VERSION.tar.gz.asc</span></div><div class="line"></div><div class="line"><span class="string">RUN</span> <span class="string">set</span> <span class="bullet">-x</span> <span class="string">\</span></div><div class="line">    <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">apk</span> <span class="string">add</span> <span class="bullet">--no-cache</span> <span class="bullet">--virtual</span> <span class="string">.fetch-deps</span> <span class="string">\</span></div><div class="line">        <span class="string">ca-certificates</span> <span class="string">\</span></div><div class="line">        <span class="string">tar</span> <span class="string">\</span></div><div class="line">        <span class="string">wget</span> <span class="string">\</span></div><div class="line">        <span class="string">openssl</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">wget</span> <span class="bullet">-O</span> <span class="string">tomcat.tar.gz</span> <span class="string">"$TOMCAT_TGZ_URL"</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">wget</span> <span class="bullet">-O</span> <span class="string">tomcat.tar.gz.asc</span> <span class="string">"$TOMCAT_ASC_URL"</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">gpg</span> <span class="bullet">--batch</span> <span class="bullet">--verify</span> <span class="string">tomcat.tar.gz.asc</span> <span class="string">tomcat.tar.gz</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">tar</span> <span class="bullet">-xvf</span> <span class="string">tomcat.tar.gz</span> <span class="bullet">--strip-components=1</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">rm</span> <span class="string">bin/*.bat</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">rm</span> <span class="string">tomcat.tar.gz*</span> <span class="string">\</span></div><div class="line">    <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">nativeBuildDir="$(mktemp</span> <span class="bullet">-d)"</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">tar</span> <span class="bullet">-xvf</span> <span class="string">bin/tomcat-native.tar.gz</span> <span class="bullet">-C</span> <span class="string">"$nativeBuildDir"</span> <span class="bullet">--strip-components=1</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">apk</span> <span class="string">add</span> <span class="bullet">--no-cache</span> <span class="bullet">--virtual</span> <span class="string">.native-build-deps</span> <span class="string">\</span></div><div class="line">        <span class="string">apr-dev</span> <span class="string">\</span></div><div class="line">        <span class="string">gcc</span> <span class="string">\</span></div><div class="line">        <span class="string">libc-dev</span> <span class="string">\</span></div><div class="line">        <span class="string">make</span> <span class="string">\</span></div><div class="line"><span class="comment">#       "openjdk$&#123;JAVA_VERSION%%[-~bu]*&#125;"="$JAVA_ALPINE_VERSION" \</span></div><div class="line">        <span class="string">openssl-dev</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">(</span> <span class="string">\</span></div><div class="line">        <span class="string">export</span> <span class="string">CATALINA_HOME="$PWD"</span> <span class="string">\</span></div><div class="line">        <span class="string">&amp;&amp;</span> <span class="string">cd</span> <span class="string">"$nativeBuildDir/native"</span> <span class="string">\</span></div><div class="line">        <span class="string">&amp;&amp;</span> <span class="string">./configure</span> <span class="string">\</span></div><div class="line"><span class="bullet">            -</span><span class="bullet">-libdir="$TOMCAT_NATIVE_LIBDIR"</span> <span class="string">\</span></div><div class="line"><span class="bullet">            -</span><span class="bullet">-prefix="$CATALINA_HOME"</span> <span class="string">\</span></div><div class="line"><span class="bullet">            -</span><span class="bullet">-with-apr="$(which</span> <span class="string">apr-1-config)"</span> <span class="string">\</span></div><div class="line"><span class="bullet">            -</span><span class="bullet">-with-java-home="$JAVA_HOME"</span> <span class="string">\</span></div><div class="line"><span class="bullet">            -</span><span class="bullet">-with-ssl=yes</span> <span class="string">\</span></div><div class="line">        <span class="string">&amp;&amp;</span> <span class="string">make</span> <span class="bullet">-j$(getconf</span> <span class="string">_NPROCESSORS_ONLN)</span> <span class="string">\</span></div><div class="line">        <span class="string">&amp;&amp;</span> <span class="string">make</span> <span class="string">install</span> <span class="string">\</span></div><div class="line">    <span class="string">)</span> <span class="string">\</span></div><div class="line">    <span class="string">&amp;&amp;</span> <span class="string">runDeps="$(</span> <span class="string">\</span></div><div class="line">        <span class="string">scanelf</span> <span class="bullet">--needed</span> <span class="bullet">--nobanner</span> <span class="bullet">--recursive</span> <span class="string">"$TOMCAT_NATIVE_LIBDIR"</span> <span class="string">\</span></div><div class="line">            <span class="string">| awk '&#123; gsub(/,/, "\nso:", $2); print "so:" $2 &#125;' \</span></div><div class="line">            | sort -u \</div><div class="line">            | xargs -r apk info --installed \</div><div class="line">            | sort -u \</div><div class="line">    )" \</div><div class="line">    &amp;&amp; apk add --virtual .tomcat-native-rundeps $runDeps \</div><div class="line">    &amp;&amp; apk del .fetch-deps .native-build-deps \</div><div class="line">    &amp;&amp; rm -rf "$nativeBuildDir" \</div><div class="line">    &amp;&amp; rm bin/tomcat-native.tar.gz</div><div class="line"></div><div class="line"># verify Tomcat Native is working properly</div><div class="line"></div><div class="line"></div><div class="line">RUN sed '447 a        tail -f /dev/null' -i bin/catalina.sh \</div><div class="line">    &amp;&amp; set -e \</div><div class="line">    &amp;&amp; nativeLines="$(catalina.sh configtest 2&gt;&amp;1)" \</div><div class="line">    &amp;&amp; nativeLines="$(echo "$nativeLines" | grep 'Apache Tomcat Native')" \</div><div class="line">    &amp;&amp; nativeLines="$(echo "$nativeLines" | sort -u)" \</div><div class="line">    &amp;&amp; if ! echo "$nativeLines" | grep 'INFO: Loaded APR based Apache Tomcat Native library' &gt;&amp;2; then \</div><div class="line">        echo &gt;&amp;2 "$nativeLines"; \</div><div class="line">        exit 1; \</div><div class="line">    fi</div><div class="line"></div><div class="line">EXPOSE 8080</div><div class="line">CMD ["catalina.sh", "start"]#</div></pre></td></tr></table></figure>
+<p>这种在构建过程中需要下载的情况，最好是托管到阿里云或者网易云，用他们的海外服务器来进行构建，否则会有些内容无法下载，例如上面的keyserver.ubuntu.com</p>
+<p>具体的可以去我在<a href="https://dev.aliyun.com/list.html?namePrefix=zhaoshg1984" target="_blank" rel="external">阿里云上的镜像仓库</a>看看</p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/docker/" rel="tag"># docker</a>
+          
+            <a href="/tags/dockerfile/" rel="tag"># dockerfile</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/20170421/centos7_firewalld_guid/" rel="next" title="CentOS7下firewalld使用指南">
+                <i class="fa fa-chevron-left"></i> CentOS7下firewalld使用指南
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/20170420/docker_common_command/" rel="prev" title="Docker常用命令">
+                Docker常用命令 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/face.jpg"
+               alt="曙光" />
+          <p class="site-author-name" itemprop="name">曙光</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">25</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">40</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/zhaoshg" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a rel="external nofollow" href="http://www.nongrj.com/" title="农仁街" target="_blank">农仁街</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Dockerfile命令介绍及实例"><span class="nav-number">1.</span> <span class="nav-text">Dockerfile命令介绍及实例</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Docker简介"><span class="nav-number">1.1.</span> <span class="nav-text">Docker简介</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Dockerfile"><span class="nav-number">1.2.</span> <span class="nav-text">Dockerfile</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Dockerfile-语法"><span class="nav-number">2.</span> <span class="nav-text">Dockerfile 语法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#什么是语法？"><span class="nav-number">2.1.</span> <span class="nav-text">什么是语法？</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Dockerfile-语法示例"><span class="nav-number">2.2.</span> <span class="nav-text">Dockerfile 语法示例</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Dockerfile-命令"><span class="nav-number">2.3.</span> <span class="nav-text">Dockerfile 命令</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ADD"><span class="nav-number">2.3.1.</span> <span class="nav-text">ADD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#CMD"><span class="nav-number">2.3.2.</span> <span class="nav-text">CMD</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ENTRYPOINT"><span class="nav-number">2.3.3.</span> <span class="nav-text">ENTRYPOINT</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ENV"><span class="nav-number">2.3.4.</span> <span class="nav-text">ENV</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#EXPOSE"><span class="nav-number">2.3.5.</span> <span class="nav-text">EXPOSE</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#FROM"><span class="nav-number">2.3.6.</span> <span class="nav-text">FROM</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#MAINTAINER"><span class="nav-number">2.3.7.</span> <span class="nav-text">MAINTAINER</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#RUN"><span class="nav-number">2.3.8.</span> <span class="nav-text">RUN</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#USER"><span class="nav-number">2.3.9.</span> <span class="nav-text">USER</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#VOLUME"><span class="nav-number">2.3.10.</span> <span class="nav-text">VOLUME</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#WORKDIR"><span class="nav-number">2.3.11.</span> <span class="nav-text">WORKDIR</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#如何使用Dockerfiles"><span class="nav-number">3.</span> <span class="nav-text">如何使用Dockerfiles</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#Dockerfile-示例一：创建一个最小的带glibc的linux镜像"><span class="nav-number">3.1.</span> <span class="nav-text">Dockerfile 示例一：创建一个最小的带glibc的linux镜像</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#创建一个Dockerfile"><span class="nav-number">3.1.1.</span> <span class="nav-text">创建一个Dockerfile</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#定义文件和它的目的"><span class="nav-number">3.1.2.</span> <span class="nav-text">定义文件和它的目的</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#构建镜像"><span class="nav-number">3.1.3.</span> <span class="nav-text">构建镜像</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Dockerfile-示例二：创建一个最小化的JDK镜像"><span class="nav-number">3.2.</span> <span class="nav-text">Dockerfile 示例二：创建一个最小化的JDK镜像</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#简述"><span class="nav-number">3.2.1.</span> <span class="nav-text">简述</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Dockerfile-示例三：创建一个最小的带JDK的tomcat镜像"><span class="nav-number">3.3.</span> <span class="nav-text">Dockerfile 示例三：创建一个最小的带JDK的tomcat镜像</span></a></li></ol></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" align="center">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">曙光</span>
+</div>
+<!--
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+-->
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fastclick/1.0.6/fastclick.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+    
+    <script>
+      var cloudTieConfig = {
+        url: document.location.href, 
+        sourceId: "",
+        productKey: "66baac132d9b4e38acd9a0a664710c6f",
+        target: "cloud-tie-wrapper"
+      };
+    </script>
+    <script src="https://img1.ws.126.net/f2e/tie/yun/sdk/loader.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("HofnnMS813HyOHPUrN3wmNkQ-gzGzoHsz", "mL2pwohDw3hUOwrR9jaBs553");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+
+</body>
+</html>
