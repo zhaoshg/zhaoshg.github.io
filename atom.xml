@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://www.javacn.top/"/>
-  <updated>2017-05-03T03:12:30.320Z</updated>
+  <updated>2017-05-05T06:47:05.034Z</updated>
   <id>http://www.javacn.top/</id>
   
   <author>
@@ -14,6 +14,193 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>分布式系统的事务处理</title>
+    <link href="http://www.javacn.top/20170505/transaction_distributed_system/"/>
+    <id>http://www.javacn.top/20170505/transaction_distributed_system/</id>
+    <published>2017-05-05T03:46:44.000Z</published>
+    <updated>2017-05-05T06:47:05.034Z</updated>
+    
+    <content type="html"><![CDATA[<h1 id="分布式事务及应用场景"><a href="#分布式事务及应用场景" class="headerlink" title="分布式事务及应用场景"></a>分布式事务及应用场景</h1><p>当我们在生产线上用一台服务器来提供数据服务的时候，我会遇到如下的两个问题：</p>
+<ol>
+<li>一台服务器的性能不足以提供足够的能力服务于所有的网络请求。</li>
+<li>我们总是害怕我们的这台服务器停机，造成服务不可用或是数据丢失。</li>
+</ol>
+<p>于是我们不得不对我们的服务器进行扩展，加入更多的机器来分担性能上的问题，以及来解决单点故障问题。<br>通常，我们会通过两种手段来扩展我们的数据服务：</p>
+<ol>
+<li><strong>数据分区</strong>：就是把数据分块放在不同的服务器上（如：uid % 16，一致性哈希等）。</li>
+<li><strong>数据镜像</strong>：让所有的服务器都有相同的数据，提供相当的服务。</li>
+</ol>
+<p>$y^i$</p>
+<a id="more"></a>
+<p>对于第一种情况，我们无法解决数据丢失的问题，单台服务器出问题时，会有部分数据丢失。所以，<strong>数据服务的高可用性只能通过第二种方法来完成——数据的冗余存储</strong>（一般工业界认为比较安全的备份数应该是3份，如：Hadoop和Dynamo）。 但是，<strong>加入更多的机器，会让我们的数据服务变得很复杂，尤其是跨服务器的事务处理，也就是跨服务器的数据一致性。</strong>这个是一个很难的问题。 让我们用最经典的Use Case：“<strong><em>A帐号向B帐号汇钱</em></strong>”来说明一下，熟悉RDBMS事务的都知道从帐号A到帐号B需要6个操作：</p>
+<ol>
+<li>从A帐号中把余额读出来。</li>
+<li>对A帐号做减法操作。</li>
+<li>把结果写回A帐号中。</li>
+<li>从B帐号中把余额读出来。</li>
+<li>对B帐号做加法操作。</li>
+<li>把结果写回B帐号中。</li>
+</ol>
+<p>为了数据的一致性，这6件事，要么都成功做完，要么都不成功，而且这个操作的过程中，对A、B帐号的其它访问必需锁死，所谓锁死就是要排除其它的读写操作，不然会有脏数据的问题，这就是事务。<br>那么，我们在加入了更多的机器后，这个事情会变得复杂起来：</p>
+<ol>
+<li><p><strong>在数据分区的方案中</strong>：如果A帐号和B帐号的数据不在同一台服务器上怎么办？我们需要一个跨机器的事务处理。也就是说，如果A的扣钱成功了，但B的加钱不成功，我们还要把A的操作给回滚回去。这在跨机器的情况下，就变得比较复杂了。</p>
+</li>
+<li><p><strong>在数据镜像的方案中</strong>：A帐号和B帐号间的汇款是可以在一台机器上完成的，但是别忘了我们有多台机器存在A帐号和B帐号的副本。如果对A帐号的汇钱有两个并发操作（要汇给B和C），这两个操作发生在不同的两台服务器上怎么办？也就是说，在数据镜像中，在不同的服务器上对同一个数据的写操作怎么保证其一致性，保证数据不冲突？</p>
+</li>
+</ol>
+<p>同时，我们还要考虑性能的因素，如果不考虑性能的话，事务得到保证并不困难，系统慢一点就行了。除了考虑性能外，我们还要考虑可用性，也就是说，一台机器没了，数据不丢失，服务可由别的机器继续提供。 于是，我们需要重点考虑下面的这么几个情况：</p>
+<ol>
+<li><strong>容灾</strong>：数据不丢、结点的Failover</li>
+<li><strong>数据的一致性</strong>：事务处理</li>
+<li><strong>性能</strong>：吞吐量 、 响应时间</li>
+</ol>
+<p>前面说过，要解决数据不丢，只能通过数据冗余的方法，就算是数据分区，每个区也需要进行数据冗余处理。这就是数据副本：当出现某个节点的数据丢失时可以从副本读到，数据副本是分布式系统解决数据丢失异常的唯一手段。所以，在这篇文章中，简单起见，我们只讨论在数据冗余情况下考虑数据的一致性和性能的问题。简单说来：</p>
+<ol>
+<li><strong>要想让数据有高可用性，就得写多份数据。</strong></li>
+<li><strong>写多份的问题会导致数据一致性的问题。</strong></li>
+<li><strong>数据一致性的问题又会引发性能问题</strong></li>
+</ol>
+<p>这就是软件开发，按下了葫芦起了瓢。</p>
+<h1 id="一致性模型"><a href="#一致性模型" class="headerlink" title="一致性模型"></a>一致性模型</h1><p>说起数据一致性来说，简单说有三种类型（当然，如果细分的话，还有很多一致性模型，如：顺序一致性，FIFO一致性，会话一致性，单读一致性，单写一致性，但为了本文的简单易读，我只说下面三种）：</p>
+<ol>
+<li>Weak 弱一致性：当你写入一个新值后，读操作在数据副本上可能读出来，也可能读不出来。比如：某些cache系统，网络游戏其它玩家的数据和你没什么关系，VOIP这样的系统，或是百度搜索引擎（呵呵）。</li>
+<li>Eventually 最终一致性：当你写入一个新值后，有可能读不出来，但在某个时间窗口之后保证最终能读出来。比如：DNS，电子邮件、Amazon S3，Google搜索引擎这样的系统。</li>
+<li>Strong 强一致性：新的数据一旦写入，在任意副本任意时刻都能读到新值。比如：文件系统，RDBMS，Azure Table都是强一致性的。</li>
+</ol>
+<p>从这三种一致型的模型上来说，我们可以看到，Weak和Eventually一般来说是异步冗余的，而Strong一般来说是同步冗余的，异步的通常意味着更好的性能，但也意味着更复杂的状态控制。同步意味着简单，但也意味着性能下降。 好，让我们由浅入深，一步一步地来看有哪些技术：</p>
+<h2 id="Master-Slave"><a href="#Master-Slave" class="headerlink" title="Master-Slave"></a>Master-Slave</h2><p>首先是Master-Slave结构，对于这种加构，Slave一般是Master的备份。在这样的系统中，一般是如下设计的：</p>
+<ol>
+<li>读写请求都由Master负责。</li>
+<li>写请求写到Master上后，由Master同步到Slave上。</li>
+</ol>
+<p>从Master同步到Slave上，你可以使用异步，也可以使用同步，可以使用Master来push，也可以使用Slave来pull。 通常来说是Slave来周期性的pull，所以，是最终一致性。这个设计的问题是，如果Master在pull周期内垮掉了，那么会导致这个时间片内的数据丢失。如果你不想让数据丢掉，Slave只能成为Read-Only的方式等Master恢复。</p>
+<p>当然，如果你可以容忍数据丢掉的话，你可以马上让Slave代替Master工作（对于只负责计算的结点来说，没有数据一致性和数据丢失的问题，Master-Slave的方式就可以解决单点问题了） 当然，Master Slave也可以是强一致性的， 比如：当我们写Master的时候，Master负责先写自己，等成功后，再写Slave，两者都成功后返回成功，整个过程是同步的，如果写Slave失败了，那么两种方法，一种是标记Slave不可用报错并继续服务（等Slave恢复后同步Master的数据，可以有多个Slave，这样少一个，还有备份，就像前面说的写三份那样），另一种是回滚自己并返回写失败。（注：一般不先写Slave，因为如果写Master自己失败后，还要回滚Slave，此时如果回滚Slave失败，就得手工订正数据了）你可以看到，如果Master-Slave需要做成强一致性有多复杂。</p>
+<h2 id="Master-Master"><a href="#Master-Master" class="headerlink" title="Master-Master"></a>Master-Master</h2><p>Master-Master，又叫Multi-master，是指一个系统存在两个或多个Master，每个Master都提供read-write服务。这个模型是Master-Slave的加强版，数据间同步一般是通过Master间的异步完成，所以是最终一致性。 Master-Master的好处是，一台Master挂了，别的Master可以正常做读写服务，他和Master-Slave一样，当数据没有被复制到别的Master上时，数据会丢失。很多数据库都支持Master-Master的Replication的机制。</p>
+<p>另外，如果多个Master对同一个数据进行修改的时候，这个模型的恶梦就出现了——对数据间的冲突合并，这并不是一件容易的事情。看看Dynamo的Vector Clock的设计（记录数据的版本号和修改者）就知道这个事并不那么简单，而且Dynamo对数据冲突这个事是交给用户自己搞的。就像我们的SVN源码冲突一样，对于同一行代码的冲突，只能交给开发者自己来处理。（在本文后后面会讨论一下Dynamo的Vector Clock）</p>
+<h2 id="Two-Three-Phase-Commit"><a href="#Two-Three-Phase-Commit" class="headerlink" title="Two/Three Phase Commit"></a>Two/Three Phase Commit</h2><p>这个协议的缩写又叫2PC，中文叫两阶段提交。在分布式系统中，每个节点虽然可以知晓自己的操作时成功或者失败，却无法知道其他节点的操作的成功或失败。当一个事务跨越多个节点时，为了保持事务的ACID特性，需要引入一个作为协调者的组件来统一掌控所有节点(称作参与者)的操作结果并最终指示这些节点是否要把操作结果进行真正的提交(比如将更新后的数据写入磁盘等等)。 两阶段提交的算法如下：</p>
+<h3 id="第一阶段："><a href="#第一阶段：" class="headerlink" title="第一阶段："></a>第一阶段：</h3><p>协调者会问所有的参与者结点，是否可以执行提交操作。</p>
+<p>各个参与者开始事务执行的准备工作：如：为资源上锁，预留资源，写undo/redo log……</p>
+<p>参与者响应协调者，如果事务的准备工作成功，则回应“可以提交”，否则回应“拒绝提交”。</p>
+<h3 id="第二阶段："><a href="#第二阶段：" class="headerlink" title="第二阶段："></a>第二阶段：</h3><p>如果所有的参与者都回应“可以提交”，那么，协调者向所有的参与者发送“正式提交”的命令。参与者完成正式提交，并释放所有资源，然后回应“完成”，协调者收集各结点的“完成”回应后结束这个Global Transaction。<br>如果有一个参与者回应“拒绝提交”，那么，协调者向所有的参与者发送“回滚操作”，并释放所有资源，然后回应“回滚完成”，协调者收集各结点的“回滚”回应后，取消这个Global Transaction。</p>
+<p><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%BA%8B%E5%8A%A1%E5%A4%84%E7%90%86/1.png" alt=""></p>
+<p>我们可以看到，2PC说白了就是第一阶段做Vote，第二阶段做决定的一个算法，也可以看到2PC这个事是强一致性的算法。在前面我们讨论过Master-Slave的强一致性策略，和2PC有点相似，只不过2PC更为保守一些——先尝试再提交。<br>2PC用的是比较多的，在一些系统设计中，会串联一系列的调用，比如：A -&gt; B -&gt; C -&gt; D，每一步都会分配一些资源或改写一些数据。比如我们B2C网上购物的下单操作在后台会有一系列的流程需要做。如果我们一步一步地做，就会出现这样的问题，如果某一步做不下去了，那么前面每一次所分配的资源需要做反向操作把他们都回收掉，所以，操作起来比较复杂。现在很多处理流程（Workflow）都会借鉴2PC这个算法，使用 try -&gt; confirm的流程来确保整个流程的能够成功完成。 举个通俗的例子，西方教堂结婚的时候，都有这样的桥段：</p>
+<ol>
+<li>牧师分别问新郎和新娘：你是否愿意……不管生老病死……（询问阶段）</li>
+<li>当新郎和新娘都回答愿意后（锁定一生的资源），牧师就会说：我宣布你们……（事务提交）</li>
+</ol>
+<p>这是多么经典的一个两阶段提交的事务处理。 另外，我们也可以看到其中的一些问题，<br>A）其中一个是同步阻塞操作，这个事情必然会非常大地影响性能。<br>B）另一个主要的问题是在TimeOut上，比如，</p>
+<ol>
+<li>如果第一阶段中，参与者没有收到询问请求，或是参与者的回应没有到达协调者。那么，需要协调者做超时处理，一旦超时，可以当作失败，也可以重试。</li>
+<li>如果第二阶段中，正式提交发出后，如果有的参与者没有收到，或是参与者提交/回滚后的确认信息没有返回，一旦参与者的回应超时，要么重试，要么把那个参与者标记为问题结点剔除整个集群，这样可以保证服务结点都是数据一致性的。</li>
+<li>糟糕的情况是，第二阶段中，如果参与者收不到协调者的commit/fallback指令，参与者将处于“状态未知”阶段，参与者完全不知道要怎么办，比如：如果所有的参与者完成第一阶段的回复后（可能全部yes，可能全部no，可能部分yes部分no），如果协调者在这个时候挂掉了。那么所有的结点完全不知道怎么办（问别的参与者都不行）。为了一致性，要么死等协调者，要么重发第一阶段的yes/no命令。</li>
+</ol>
+<p>两段提交最大的问题就是第 3 项，<strong>如果第一阶段完成后，参与者在第二阶没有收到决策，那么数据结点会进入“不知所措”的状态，这个状态会block住整个事务。</strong>也就是说，协调者Coordinator对于事务的完成非常重要，Coordinator的可用性是个关键。 </p>
+<p>因些，我们引入三段提交，三段提交在Wikipedia上的描述如下，他把二段提交的第一个段break成了两段：<strong>询问，然后再锁资源。最后真正提交。</strong><br>三段提交的示意图如下：</p>
+<p><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%BA%8B%E5%8A%A1%E5%A4%84%E7%90%86/2.png" alt=""></p>
+<p>三段提交的核心理念是：<strong>在询问的时候并不锁定资源，除非所有人都同意了，才开始锁资源。</strong></p>
+<p>理论上来说，如果第一阶段所有的结点返回成功，那么有理由相信成功提交的概率很大。这样一来，可以降低参与者Cohorts的状态未知的概率。也就是说，一旦参与者收到了PreCommit，意味他知道大家其实都同意修改了。这一点很重要。</p>
+<p>下面我们来看一下3PC的状态迁移图：（注意图中的虚线，那些F,T是Failuer或Timeout，其中的：状态含义是 q – Query，a – Abort，w – Wait，p – PreCommit，c – Commit）</p>
+<p><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%BA%8B%E5%8A%A1%E5%A4%84%E7%90%86/3.png" alt=""></p>
+<p>从上图的状态变化图我们可以从虚线（那些F,T是Failuer或Timeout）看到——<strong>如果结点处在P状态（PreCommit）的时候发生了F/T的问题，三段提交比两段提交的好处是，三段提交可以继续直接把状态变成C状态（Commit），而两段提交则不知所措。</strong></p>
+<p>其实，三段提交是一个很复杂的事情，实现起来相当难，而且也有一些问题。</p>
+<p>看到这里，我相信你有很多很多的问题，你一定在思考2PC/3PC中各种各样的失败场景，<strong>你会发现Timeout是个非常难处理的事情，因为网络上的Timeout在很多时候让你无所事从，你也不知道对方是做了还是没有做。于是你好好的一个状态机就因为Timeout成了个摆设。</strong></p>
+<p>一个网络服务会有三种状态：</p>
+<ol>
+<li>Success</li>
+<li>Failure</li>
+<li>Timeout</li>
+</ol>
+<p>第三个绝对是恶梦，尤其在你需要维护状态的时候。</p>
+<h2 id="Two-Generals-Problem（两将军问题）"><a href="#Two-Generals-Problem（两将军问题）" class="headerlink" title="Two Generals Problem（两将军问题）"></a>Two Generals Problem（两将军问题）</h2><p><a href="http://en.wikipedia.org/wiki/Two_Generals&#39;_Problem" target="_blank" rel="external">Two Generals Problem</a> 两将军问题是这么一个思维性实验问题：<br>有两支军队，它们分别有一位将军领导，现在准备攻击一座修筑了防御工事的城市。这两支军队都驻扎在那座城市的附近，分占一座山头。一道山谷把两座山分隔开来，并且两位将军唯一的通信方式就是派各自的信使来往于山谷两边。不幸的是，这个山谷已经被那座城市的保卫者占领，并且存在一种可能，那就是任何被派出的信使通过山谷是会被捕。 请注意，虽然两位将军已经就攻击那座城市达成共识，但在他们各自占领山头阵地之前，并没有就进攻时间达成共识。两位将军必须让自己的军队同时进攻城市才能取得成功。因此，他们必须互相沟通，以确定一个时间来攻击，并同意就在那时攻击。如果只有一个将军进行攻击，那么这将是一个灾难性的失败。 </p>
+<p>这个思维实验就包括考虑他们如何去做这件事情。下面是我们的思考：</p>
+<ol>
+<li>第一位将军先发送一段消息“让我们在上午9点开始进攻”。然而，一旦信使被派遣，他是否通过了山谷，第一位将军就不得而知了。任何一点的不确定性都会使得第一位将军攻击犹豫，因为如果第二位将军不能在同一时刻发动攻击，那座城市的驻军就会击退他的军队的进攻，导致他的军对被摧毁。</li>
+<li>知道了这一点，第二位将军就需要发送一个确认回条：“我收到您的邮件，并会在9点的攻击。”但是，如果带着确认消息的信使被抓怎么办？所以第二位将军会犹豫自己的确认消息是否能到达。</li>
+<li>于是，似乎我们还要让第一位将军再发送一条确认消息——“我收到了你的确认”。然而，如果这位信使被抓怎么办呢？</li>
+<li>这样一来，是不是我们还要第二位将军发送一个“确认收到你的确认”的信息。</li>
+</ol>
+<p>靠，于是你会发现，这事情很快就发展成为不管发送多少个确认消息，都没有办法来保证两位将军有足够的自信自己的信使没有被敌军捕获。</p>
+<p><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%BA%8B%E5%8A%A1%E5%A4%84%E7%90%86/3.jpg" alt=""></p>
+<p><strong>这个问题是无解的。</strong></p>
+<p>两个将军问题和它的无解证明首先由E.A.Akkoyunlu,K.Ekanadham和R.V.Huber于1975年在《一些限制与折衷的网络通信设计》一文中发表，就在这篇文章的第73页中一段描述两个黑帮之间的通信中被阐明。 1978年，在Jim Gray的《数据库操作系统注意事项》一书中（从第465页开始）被命名为两个将军悖论。作为两个将军问题的定义和无解性的证明的来源，这一参考被广泛提及。</p>
+<p>这个实验意在阐明：<strong>试图通过建立在一个不可靠的连接上的交流来协调一项行动的隐患和设计上的巨大挑战。</strong></p>
+<p>从工程上来说，一个解决两个将军问题的实际方法是使用一个能够承受通信信道不可靠性的方案，并不试图去消除这个不可靠性，但要将不可靠性削减到一个可以接受的程度。<br>比如，第一位将军排出了100位信使并预计他们都被捕的可能性很小。在这种情况下，不管第二位将军是否会攻击或者受到任何消息，第一位将军都会进行攻击。另外，第一位将军可以发送一个消息流，而第二位将军可以对其中的每一条消息发送一个确认消息，这样如果每条消息都被接收到，两位将军会感觉更好。<br>然而我们可以从证明中看出，他们俩都不能肯定这个攻击是可以协调的。他们没有算法可用（比如，收到4条以上的消息就攻击）能够确保防止仅有一方攻击。再者，第一位将军还可以为每条消息编号，说这是1号，2号……直到n号。这种方法能让第二位将军知道通信信道到底有多可靠，并且返回合适的数量的消息来确保最后一条消息被接收到。如果信道是可靠的话，只要一条消息就行了，其余的就帮不上什么忙了。最后一条和第一条消息丢失的概率是相等的。</p>
+<p>两将军问题可以扩展成更变态的<strong>拜占庭将军问题 (Byzantine Generals Problem)</strong>，其故事背景是这样的：<br>拜占庭位于现在土耳其的伊斯坦布尔，是东罗马帝国的首都。由于当时拜占庭罗马帝国国土辽阔，为了防御目的，因此每个军队都分隔很远，将军与将军之间只能靠信差传消息。 在战争的时候，拜占庭军队内所有将军必需达成一致的共识，决定是否有赢的机会才去攻打敌人的阵营。但是，军队可能有叛徒和敌军间谍，这些叛徒将军们会扰乱或左右决策的过程。这时候，在已知有成员谋反的情况下，其余忠诚的将军在不受叛徒的影响下如何达成一致的协议，这就是拜占庭将军问题。</p>
+<h2 id="Paxos算法"><a href="#Paxos算法" class="headerlink" title="Paxos算法"></a>Paxos算法</h2><p><a href="http://en.wikipedia.org/wiki/Paxos_(computer_science" target="_blank" rel="external">Wikipedia上的各种Paxos算法</a>)的描述非常详细，大家可以去围观一下。</p>
+<p>Paxos 算法解决的问题是在一个可能发生上述异常的分布式系统中如何就某个值达成一致，保证不论发生以上任何异常，都不会破坏决议的一致性。<br>一个典型的场景是，在一个分布式数据库系统中，如果各节点的初始状态一致，每个节点都执行相同的操作序列，那么他们最后能得到一个一致的状态。为保证每个节点执行相同的命令序列，需要在每一条指令上执行一个「一致性算法」以保证每个节点看到的指令一致。一个通用的一致性算法可以应用在许多场景中，是分布式计算中的重要问题。从20世纪80年代起对于一致性算法的研究就没有停止过。</p>
+<p><strong>Notes</strong>：Paxos算法是莱斯利·兰伯特（Leslie Lamport，就是 LaTeX 中的”La”，此人现在在微软研究院）于1990年提出的一种基于消息传递的一致性算法。由于算法难以理解起初并没有引起人们的重视，使Lamport在八年后1998年重新发表到ACM Transactions on Computer Systems上（<a href="http://research.microsoft.com/users/lamport/pubs/lamport-paxos.pdf" target="_blank" rel="external">The Part-Time Parliament</a>）。即便如此paxos算法还是没有得到重视，2001年Lamport 觉得同行无法接受他的幽默感，于是用容易接受的方法重新表述了一遍（Paxos Made Simple）。可见Lamport对Paxos算法情有独钟。近几年Paxos算法的普遍使用也证明它在分布式一致性算法中的重要地位。2006年Google的三篇论文初现“云”的端倪，其中的Chubby Lock服务使用Paxos作为Chubby Cell中的一致性算法，Paxos的人气从此一路狂飙。（Lamport 本人在 他的blog 中描写了他用9年时间发表这个算法的前前后后）</p>
+<p><strong>注</strong>：Amazon的AWS中，所有的云服务都基于一个ALF（Async Lock Framework）的框架实现的，这个ALF用的就是Paxos算法。我在Amazon的时候，看内部的分享视频时，设计者在内部的Principle Talk里说他参考了ZooKeeper的方法，但他用了另一种比ZooKeeper更易读的方式实现了这个算法。</p>
+<p>简单说来，Paxos的目的是让整个集群的结点对某个值的变更达成一致。Paxos算法基本上来说是个民主选举的算法——大多数的决定会成个整个集群的统一决定。任何一个点都可以提出要修改某个数据的提案，是否通过这个提案取决于这个集群中是否有超过半数的结点同意（所以Paxos算法需要集群中的结点是单数）。</p>
+<p>这个算法有两个阶段（假设这个有三个结点：A，B，C）：</p>
+<ul>
+<li><p>第一阶段：Prepare阶段<br>A把申请修改的请求Prepare Request发给所有的结点A，B，C。注意，Paxos算法会有一个Sequence Number（你可以认为是一个提案号，这个数不断递增，而且是唯一的，也就是说A和B不可能有相同的提案号），这个提案号会和修改请求一同发出，任何结点在“Prepare阶段”时都会拒绝其值小于当前提案号的请求。所以，结点A在向所有结点申请修改请求的时候，需要带一个提案号，越新的提案，这个提案号就越是是最大的。<br>如果接收结点收到的提案号n大于其它结点发过来的提案号，这个结点会回应Yes（本结点上最新的被批准提案号），并保证不接收其它&lt;n的提案。这样一来，结点上在Prepare阶段里总是会对最新的提案做承诺。<br>优化：在上述 prepare 过程中，如果任何一个结点发现存在一个更高编号的提案，则需要通知 提案人，提醒其中断这次提案。</p>
+</li>
+<li><p>第二阶段：Accept阶段<br>如果提案者A收到了超过半数的结点返回的Yes，然后他就会向所有的结点发布Accept Request（同样，需要带上提案号n），如果没有超过半数的话，那就返回失败。<br>当结点们收到了Accept Request后，如果对于接收的结点来说，n是最大的了，那么，它就会修改这个值，如果发现自己有一个更大的提案号，那么，结点就会拒绝修改。</p>
+</li>
+</ul>
+<p>我们可以看以，这似乎就是一个“两段提交”的优化。其实，2<strong>PC/3PC都是分布式一致性算法的残次版本，Google Chubby的作者Mike Burrows说过这个世界上只有一种一致性算法，那就是Paxos，其它的算法都是残次品。</strong></p>
+<p>我们还可以看到：对于同一个值的在不同结点的修改提案就算是在接收方被乱序收到也是没有问题的。</p>
+<p>关于一些实例，你可以看一下Wikipedia中文中的“<a href="http://zh.wikipedia.org/zh/Paxos%E7%AE%97%E6%B3%95#.E5.AE.9E.E4.BE.8B" target="_blank" rel="external">Paxos样例</a>”一节，我在这里就不再多说了。对于Paxos算法中的一些异常示例，大家可以自己推导一下。你会发现基本上来说只要保证有半数以上的结点存活，就没有什么问题。</p>
+<p>多说一下，自从Lamport在1998年发表Paxos算法后，对Paxos的各种改进工作就从未停止，其中动作最大的莫过于2005年发表的<a href="http://research.microsoft.com/apps/pubs/default.aspx?id=64624" target="_blank" rel="external">Fast Paxos</a>。无论何种改进，其重点依然是在消息延迟与性能、吞吐量之间作出各种权衡。为了容易地从概念上区分二者，称前者Classic Paxos，改进后的后者为Fast Paxos。</p>
+<h1 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h1><p>下图来自：Google App Engine的co-founder Ryan Barrett在2009年的google i/o上的演讲《<a href="http://snarfed.org/transactions_across_datacenters_io.html" target="_blank" rel="external">Transaction Across DataCenter</a>》（视频： <a href="http://www.youtube.com/watch?v=srOgpXECblk）" target="_blank" rel="external">http://www.youtube.com/watch?v=srOgpXECblk）</a></p>
+<p><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E5%88%86%E5%B8%83%E5%BC%8F%E7%B3%BB%E7%BB%9F%E7%9A%84%E4%BA%8B%E5%8A%A1%E5%A4%84%E7%90%86/5.jpg" alt=""></p>
+<p>前面，我们说过，要想让数据有高可用性，就需要冗余数据写多份。写多份的问题会带来一致性的问题，而一致性的问题又会带来性能问题。从上图我们可以看到，我们基本上来说不可以让所有的项都绿起来，这就是著名的<strong>CAP理论：一致性，可用性，分区容忍性，你只可能要其中的两个。</strong></p>
+<h1 id="NWR模型"><a href="#NWR模型" class="headerlink" title="NWR模型"></a>NWR模型</h1><p>最后我还想提一下<strong>Amazon Dynamo的NWR模型。这个NWR模型把CAP的选择权交给了用户，让用户自己的选择你的CAP中的哪两个。</strong></p>
+<p>所谓NWR模型。N代表N个备份，W代表要写入至少W份才认为成功，R表示至少读取R个备份。配置的时候要求<strong>W+R &gt; N</strong>。 因为W+R &gt; N， 所以 R &gt; N-W 这个是什么意思呢？就是读取的份数一定要比总备份数减去确保写成功的倍数的差值要大。</p>
+<p>也就是说，每次读取，都至少读取到一个最新的版本。从而不会读到一份旧数据。当我们需要高可写的环境的时候，我们可以配置W = 1 如果N=3 那么R = 3。 这个时候只要写任何节点成功就认为成功，但是读的时候必须从所有的节点都读出数据。如果我们要求读的高效率，我们可以配置 W=N R=1。这个时候任何一个节点读成功就认为成功，但是写的时候必须写所有三个节点成功才认为成功。</p>
+<p>NWR模型的一些设置会造成脏数据的问题，因为这很明显不是像Paxos一样是一个强一致的东西，所以，可能每次的读写操作都不在同一个结点上，于是会出现一些结点上的数据并不是最新版本，但却进行了最新的操作。</p>
+<p>所以，Amazon Dynamo引了数据版本的设计。也就是说，如果你读出来数据的版本是v1，当你计算完成后要回填数据后，却发现数据的版本号已经被人更新成了v2，那么服务器就会拒绝你。版本这个事就像“乐观锁”一样。</p>
+<p>但是，对于分布式和NWR模型来说，版本也会有恶梦的时候——就是版本冲的问题，比如：我们设置了N=3 W=1，如果A结点上接受了一个值，版本由v1 -&gt; v2，但还没有来得及同步到结点B上（异步的，应该W=1，写一份就算成功），B结点上还是v1版本，此时，B结点接到写请求，按道理来说，他需要拒绝掉，但是他一方面并不知道别的结点已经被更新到v2，另一方面他也无法拒绝，因为W=1，所以写一分就成功了。于是，出现了严重的版本冲突。</p>
+<p>Amazon的Dynamo把版本冲突这个问题巧妙地回避掉了——版本冲这个事交给用户自己来处理。</p>
+<p>于是，Dynamo引入了Vector Clock（矢量钟？!）这个设计。这个设计让每个结点各自记录自己的版本信息，也就是说，对于同一个数据，需要记录两个事：1）谁更新的我，2）我的版本号是什么。</p>
+<p>下面，我们来看一个操作序列：</p>
+<ol>
+<li>一个写请求，第一次被节点A处理了。节点A会增加一个版本信息(A，1)。我们把这个时候的数据记做D1(A，1)。 然后另外一个对同样key的请求还是被A处理了于是有D2(A，2)。这个时候，D2是可以覆盖D1的，不会有冲突产生。</li>
+<li>现在我们假设D2传播到了所有节点(B和C)，B和C收到的数据不是从客户产生的，而是别人复制给他们的，所以他们不产生新的版本信息，所以现在B和C所持有的数据还是D2(A，2)。于是A，B，C上的数据及其版本号都是一样的。</li>
+<li>如果我们有一个新的写请求到了B结点上，于是B结点生成数据D3(A,2; B,1)，意思是：数据D全局版本号为3，A升了两新，B升了一次。这不就是所谓的代码版本的log么？</li>
+<li>如果D3没有传播到C的时候又一个请求被C处理了，于是，以C结点上的数据是D4(A,2; C,1)。</li>
+<li>好，最精彩的事情来了：如果这个时候来了一个读请求，我们要记得，我们的W=1 那么R=N=3，所以R会从所有三个节点上读，此时，他会读到三个版本：<ul>
+<li>A结点：D2(A,2)</li>
+<li>B结点：D3(A,2;  B,1);</li>
+<li>C结点：D4(A,2;  C,1)</li>
+</ul>
+</li>
+<li>这个时候可以判断出，D2已经是旧版本（已经包含在D3/D4中），可以舍弃。</li>
+<li>但是D3和D4是明显的版本冲突。于是，交给调用方自己去做版本冲突处理。就像源代码版本管理一样。</li>
+</ol>
+<p>很明显，上述的Dynamo的配置用的是CAP里的A和P。</p>
+<p>我非常推大家都去看看这篇论文：《<a href="http://www.read.seas.harvard.edu/~kohler/class/cs239-w08/decandia07dynamo.pdf" target="_blank" rel="external">Dynamo：Amazon’s Highly Available Key-Value Store</a>》，如果英文痛苦，你可以看看<a href="http://vdisk.weibo.com/s/AKRQZMLLc1ol" target="_blank" rel="external">译文</a>（译者不详）。</p>
+<p>本文转载自：<a href="http://coolshell.cn/articles/10910.html" target="_blank" rel="external">酷 壳</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;h1 id=&quot;分布式事务及应用场景&quot;&gt;&lt;a href=&quot;#分布式事务及应用场景&quot; class=&quot;headerlink&quot; title=&quot;分布式事务及应用场景&quot;&gt;&lt;/a&gt;分布式事务及应用场景&lt;/h1&gt;&lt;p&gt;当我们在生产线上用一台服务器来提供数据服务的时候，我会遇到如下的两个问题：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;一台服务器的性能不足以提供足够的能力服务于所有的网络请求。&lt;/li&gt;
+&lt;li&gt;我们总是害怕我们的这台服务器停机，造成服务不可用或是数据丢失。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;于是我们不得不对我们的服务器进行扩展，加入更多的机器来分担性能上的问题，以及来解决单点故障问题。&lt;br&gt;通常，我们会通过两种手段来扩展我们的数据服务：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;数据分区&lt;/strong&gt;：就是把数据分块放在不同的服务器上（如：uid % 16，一致性哈希等）。&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;数据镜像&lt;/strong&gt;：让所有的服务器都有相同的数据，提供相当的服务。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;$y^i$&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="分布式" scheme="http://www.javacn.top/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
+    
+    
+      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
+    
+      <category term="分布式" scheme="http://www.javacn.top/tags/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
+    
+      <category term="事务" scheme="http://www.javacn.top/tags/%E4%BA%8B%E5%8A%A1/"/>
+    
+  </entry>
   
   <entry>
     <title>10种排序算法</title>
@@ -151,11 +338,11 @@
       <category term="java" scheme="http://www.javacn.top/categories/java/"/>
     
     
+      <category term="java" scheme="http://www.javacn.top/tags/java/"/>
+    
       <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
     
       <category term="排序" scheme="http://www.javacn.top/tags/%E6%8E%92%E5%BA%8F/"/>
-    
-      <category term="java" scheme="http://www.javacn.top/tags/java/"/>
     
   </entry>
   
@@ -535,9 +722,9 @@
       <category term="分布式" scheme="http://www.javacn.top/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
     
-      <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
-    
       <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
+    
+      <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
     
       <category term="MVCC" scheme="http://www.javacn.top/tags/MVCC/"/>
     
@@ -683,9 +870,9 @@
       <category term="分布式" scheme="http://www.javacn.top/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
     
-      <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
-    
       <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
+    
+      <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
     
       <category term="分布式" scheme="http://www.javacn.top/tags/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
@@ -842,9 +1029,9 @@
       <category term="分布式" scheme="http://www.javacn.top/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
     
-      <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
-    
       <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
+    
+      <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
     
       <category term="分布式" scheme="http://www.javacn.top/tags/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
@@ -2325,9 +2512,9 @@
     
       <category term="docker" scheme="http://www.javacn.top/tags/docker/"/>
     
-      <category term="consul" scheme="http://www.javacn.top/tags/consul/"/>
-    
       <category term="overlay" scheme="http://www.javacn.top/tags/overlay/"/>
+    
+      <category term="consul" scheme="http://www.javacn.top/tags/consul/"/>
     
       <category term="多宿主机" scheme="http://www.javacn.top/tags/%E5%A4%9A%E5%AE%BF%E4%B8%BB%E6%9C%BA/"/>
     
@@ -2369,67 +2556,6 @@
       <category term="标签" scheme="http://www.javacn.top/tags/%E6%A0%87%E7%AD%BE/"/>
     
       <category term="tags" scheme="http://www.javacn.top/tags/tags/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Docker Compose安装、使用和示例</title>
-    <link href="http://www.javacn.top/20170419/docker_compose_install_use_exp/"/>
-    <id>http://www.javacn.top/20170419/docker_compose_install_use_exp/</id>
-    <published>2017-04-19T07:30:52.000Z</published>
-    <updated>2017-05-03T03:07:07.306Z</updated>
-    
-    <content type="html"><![CDATA[<p>Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。</p>
-<h1 id="1-安装Docker和Compose"><a href="#1-安装Docker和Compose" class="headerlink" title="1. 安装Docker和Compose"></a>1. 安装Docker和Compose</h1><p>   Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。</p>
-<h2 id="安装"><a href="#安装" class="headerlink" title="安装"></a>安装</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$curl</span> -L <span class="string">"https://github.com/docker/compose/releases/download/1.11.2/docker-compose-$(uname -s)-$(uname -m)"</span> -o /usr/local/bin/docker-compose</div><div class="line">    </div><div class="line"><span class="variable">$chmod</span> +x /usr/local/bin/docker-compose</div></pre></td></tr></table></figure>
-<a id="more"></a>
-<h2 id="测试安装结果"><a href="#测试安装结果" class="headerlink" title="测试安装结果"></a>测试安装结果</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span>-compose --version</div><div class="line">docker-compose version: <span class="number">1.11</span>.<span class="number">2</span></div></pre></td></tr></table></figure>
-<h1 id="2-使用Compose"><a href="#2-使用Compose" class="headerlink" title="2. 使用Compose"></a>2. 使用Compose</h1><p>使用Compose只需要简单的三个步骤：</p>
-<p><strong>首先</strong>，使用Dockerfile来定义你的应用环境：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="string">FROM</span> <span class="attr">python:2.7</span></div><div class="line"><span class="string">ADD</span> <span class="string">./code</span></div><div class="line"><span class="string">WORKDIR</span> <span class="string">/code</span></div><div class="line"><span class="string">RUN</span> <span class="string">pip</span> <span class="string">install</span> <span class="bullet">-r</span> <span class="string">requirements.txt</span></div></pre></td></tr></table></figure></p>
-<p>其中，requirements.txt中的内容包括：<br><figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">flask</div><div class="line">redis</div></pre></td></tr></table></figure></p>
-<p>再用Python写一个简单的app.py<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">from</span> flask importFlaskfrom redis importRedisimport os</div><div class="line">app =Flask(__name__)</div><div class="line">redis =Redis(host=<span class="string">'redis'</span>, port=<span class="number">6379</span>)@app.route(<span class="string">'/'</span>)<span class="function"><span class="keyword">def</span> <span class="title">hello</span><span class="params">()</span>:</span></div><div class="line">    redis.incr(<span class="string">'hits'</span>)<span class="keyword">return</span><span class="string">'Hello World! I have been seen %s times.'</span>% redis.get(<span class="string">'hits'</span>)<span class="keyword">if</span> __name__ `<span class="string">"__main__"</span>:</div><div class="line">    app.run(host=<span class="string">"0.0.0.0"</span>, debug=<span class="keyword">True</span>)</div></pre></td></tr></table></figure></p>
-<p><strong>第二步</strong>，用一个compose.yaml来定义你的应用服务，他们可以把不同的服务生成不同的容器中组成你的应用。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="attr">web:</span></div><div class="line"><span class="attr">  build:</span><span class="string">.</span></div><div class="line"><span class="attr">  command:</span> <span class="string">python</span> <span class="string">app.py</span></div><div class="line"><span class="attr">  ports:</span></div><div class="line"><span class="bullet">         -</span> <span class="string">"5000:5000"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">         -</span> <span class="string">.:/code</span></div><div class="line"><span class="attr">  links:</span></div><div class="line"><span class="bullet">         -</span> <span class="string">redis</span></div><div class="line"><span class="attr">redis:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">redis</span></div></pre></td></tr></table></figure></p>
-<p><strong>第三步</strong>，执行docker-compose up来启动你的应用，它会根据compose.yaml的设置来pull/run这俩个容器，然后再启动。</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line">Creating myapp_redis_1...</div><div class="line">Creating myapp_web_1...</div><div class="line">Building web...</div><div class="line">Step 0 : FROM python:2.7</div><div class="line">2.7: Pulling from python</div><div class="line">...</div><div class="line">Status: Downloaded newer image for python:2.7</div><div class="line"> ---&gt; d833e0b23482</div><div class="line">Step 1 : ADD . /code</div><div class="line"> ---&gt; 1c04b1b15808</div><div class="line">Removing intermediate container 9dab91b4410d</div><div class="line">Step 2 : WORKDIR /code</div><div class="line"> ---&gt; Running in f495a62feac9</div><div class="line"> ---&gt; ffea89a7b090</div><div class="line">Attaching to myapp_redis_1, myapp_web_1</div><div class="line">......</div><div class="line">redis_1 | [1] 17 May 10:42:38.147 * The server is now ready to accept connections on port 6379</div><div class="line">web_1   |  * Running on http://0.0.0.0:5000/ (Press CTRL+C to quit)</div><div class="line">web_1   |  * Restarting with stat</div></pre></td></tr></table></figure>
-<h1 id="3-Yaml文件参考"><a href="#3-Yaml文件参考" class="headerlink" title="3. Yaml文件参考"></a>3. Yaml文件参考</h1><p>在上面的yaml文件中，我们可以看到compose文件的基本结构。首先是定义一个服务名，下面是yaml服务中的一些选项条目：</p>
-<p><code>image</code>:镜像的ID<br><code>build</code>:直接从pwd的Dockerfile来build，而非通过image选项来pull<br><code>links</code>：连接到那些容器。每个占一行，格式为SERVICE[:ALIAS],例如 – db[:database]<br><code>external_links</code>：连接到该compose.yaml文件之外的容器中，比如是提供共享或者通用服务的容器服务。格式同links<br><code>command</code>：替换默认的command命令<br><code>ports</code>: 导出端口。格式可以是：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="attr">ports:</span><span class="bullet">-"3000"-"8000:8000"-"127.0.0.1:8001:8001"</span></div></pre></td></tr></table></figure></p>
-<p><code>expose</code>:导出端口，但不映射到宿主机的端口上。它仅对links的容器开放。格式直接指定端口号即可。<br><code>volumes</code>：加载路径作为卷，可以指定只读模式：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="attr">volumes:</span><span class="bullet">-/var/lib/mysql</span></div><div class="line"><span class="bullet"> -</span> <span class="string">cache/:/tmp/cache</span></div><div class="line"><span class="bullet"> -</span><span class="string">~/configs:/etc/configs/:ro</span></div></pre></td></tr></table></figure></p>
-<p><code>volumes_from</code>：加载其他容器或者服务的所有卷<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="attr">environment:</span><span class="bullet">-</span> <span class="string">RACK_ENV=development</span></div><div class="line"><span class="bullet">  -</span> <span class="string">SESSION_SECRET</span></div></pre></td></tr></table></figure></p>
-<p><code>env_file</code>：从一个文件中导入环境变量，文件的格式为RACK_ENV=development<br><code>extends</code>:扩展另一个服务，可以覆盖其中的一些选项。一个sample如下：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="attr">webapp:</span></div><div class="line"><span class="attr">  build:</span><span class="string">./webapp</span></div><div class="line"><span class="attr">  environment:</span><span class="bullet">-</span> <span class="string">DEBUG=false-</span> <span class="string">SEND_EMAILS=false</span></div><div class="line"><span class="string">development.yml</span></div><div class="line"><span class="attr">web:</span><span class="attr">extends:</span></div><div class="line"><span class="attr">    file:</span> <span class="string">common.yml</span></div><div class="line"><span class="attr">    service:</span> <span class="string">webapp</span></div><div class="line"><span class="attr">  ports:</span><span class="bullet">-"8000:8000"</span></div><div class="line"><span class="attr">  links:</span><span class="bullet">-</span> <span class="string">db</span></div><div class="line"><span class="attr">  environment:</span><span class="bullet">-</span> <span class="string">DEBUG=true</span></div><div class="line"><span class="attr">db:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">postgres</span></div></pre></td></tr></table></figure></p>
-<p><code>net</code>：容器的网络模式，可以为”bridge”, “none”, “container:[name or id]”, “host”中的一个。<br><code>dns</code>：可以设置一个或多个自定义的DNS地址。<br><code>dns_search</code>:可以设置一个或多个DNS的扫描域。<br>其他的<code>working_dir</code>, <code>entrypoint</code>, <code>user</code>, <code>hostname</code>, <code>domainname</code>, <code>mem_limit</code>, <code>privileged</code>, <code>restart</code>, <code>stdin_open</code>, <code>tty</code>, <code>cpu_shares</code>，和<code>docker run</code>命令是一样的，这些命令都是单行的命令。例如：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="attr">cpu_shares:</span><span class="number">73</span></div><div class="line"><span class="attr">working_dir:</span><span class="string">/code</span></div><div class="line"><span class="attr">entrypoint:</span> <span class="string">/code/entrypoint.sh</span></div><div class="line"><span class="attr">user:</span> <span class="string">postgresql</span></div><div class="line"><span class="attr">hostname:</span> <span class="string">foo</span></div><div class="line"><span class="attr">domainname:</span> <span class="string">foo.com</span></div><div class="line"><span class="attr">mem_limit:</span><span class="number">1000000000</span></div><div class="line"><span class="attr">privileged:</span><span class="literal">true</span></div><div class="line"><span class="attr">restart:</span> <span class="string">always</span></div><div class="line"><span class="attr">stdin_open:</span><span class="literal">true</span></div><div class="line"><span class="attr">tty:</span><span class="literal">true</span></div></pre></td></tr></table></figure></p>
-<h1 id="4-docker-compose常用命令"><a href="#4-docker-compose常用命令" class="headerlink" title="4. docker-compose常用命令"></a>4. docker-compose常用命令</h1><p>在第二节中的<code>docker-compose up</code>，这两个容器都是在前台运行的。我们可以指定-d命令以daemon的方式启动容器。除此之外，docker-compose还支持下面参数：  </p>
-<p><code>--verbose</code>：输出详细信息<br><code>-f</code> 制定一个非docker-compose.yml命名的yaml文件<br><code>-p</code> 设置一个项目名称（默认是directory名）  </p>
-<p><code>docker-compose</code>的动作包括：</p>
-<p>&emsp; <code>build</code>：构建服务<br>&emsp; <code>kill -s SIGINT</code>：给服务发送特定的信号。<br>&emsp; <code>logs</code>：输出日志<br>&emsp; <code>port</code>：输出绑定的端口<br>&emsp; <code>ps</code>：输出运行的容器<br>&emsp; <code>pull</code>：pull服务的image<br>&emsp; <code>rm</code>：删除停止的容器<br>&emsp; <code>run</code>: 运行某个服务，例如docker-compose run web python manage.py ps<br>&emsp; <code>start</code>：运行某个服务中存在的容器。<br>&emsp; <code>stop</code>:停止某个服务中存在的容器。<br>&emsp; <code>up</code>：create + run + attach容器到服务。<br>&emsp; <code>scale</code>：设置服务运行的容器数量。例如：docker-compose scale web=2 worker=3</p>
-<h1 id="5-个人示例"><a href="#5-个人示例" class="headerlink" title="5. 个人示例"></a>5. 个人示例</h1><h2 id="示例一"><a href="#示例一" class="headerlink" title="示例一"></a>示例一</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$vim</span> ~/workspace/docker-compose-env.yml</div></pre></td></tr></table></figure>
-<h3 id="代码："><a href="#代码：" class="headerlink" title="代码："></a>代码：</h3><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div></pre></td><td class="code"><pre><div class="line"><span class="attr">mysql:</span></div><div class="line"><span class="attr">  image:</span> <span class="attr">mysql:5.6.35</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">mysql_db</span></div><div class="line"><span class="attr">  expose:</span></div><div class="line"><span class="bullet">    -</span> <span class="string">"3306"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/var/lib/mysql/:/var/lib/mysql/</span></div><div class="line"><span class="attr">  environment:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">MYSQL_ROOT_PASSWORD=yourpassword</span></div><div class="line"><span class="attr">  net:</span> <span class="string">mynet</span></div><div class="line"></div><div class="line"><span class="attr">rbac:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat:7-jre8-alpine</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">rbac</span></div><div class="line"><span class="attr">  expose:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">"8080"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/workspace/projects/rbac/:/usr/local/tomcat/webapps/rbac</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/rbac/tomcat/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/rbac/:/home/logs/rbac/</span></div><div class="line"><span class="attr">  net:</span>  <span class="string">mynet</span></div><div class="line"><span class="attr">  links:</span></div><div class="line"><span class="attr">        - mysql:</span><span class="string">mysql_db</span></div></pre></td></tr></table></figure>
-<ul>
-<li>mynet是创建的overlay网络， 详见<a href="http://note.youdao.com/group/#/16052066/(folder/137189937//full:md/137649015" target="_blank" rel="external">基于consul的Docker-overlay跨多宿主机容器网络</a>?full=true)</li>
-</ul>
-<h3 id="运行"><a href="#运行" class="headerlink" title="运行"></a>运行</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span>-compose -f ~/workspace/docker-compose-env.yml up -d</div></pre></td></tr></table></figure>
-<h3 id="查看启动情况"><a href="#查看启动情况" class="headerlink" title="查看启动情况"></a>查看启动情况</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> ps</div><div class="line"></div><div class="line">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES</div><div class="line"><span class="number">936</span>d6a048068        mysql:<span class="number">5.6</span>.<span class="number">35</span>        <span class="string">"docker-entrypoint..."</span>   <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">3306</span>/tcp                 workspace_mysql_1</div><div class="line">f1827893e1b4        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">8080</span>/tcp                 workspace_rbac_1</div></pre></td></tr></table></figure>
-<h2 id="示例二"><a href="#示例二" class="headerlink" title="示例二"></a>示例二</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$vim</span> ~/workspace/docker-compose-projects.yml</div></pre></td></tr></table></figure>
-<h3 id="代码：-1"><a href="#代码：-1" class="headerlink" title="代码："></a>代码：</h3><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="attr">discenter:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat:7-jre8-alpine</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">discenter</span></div><div class="line"><span class="attr">  ports:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">"8888:8080"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/workspace/projects/discenter/:/usr/local/tomcat/webapps/ROOT</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/discenter/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="attr">  net:</span> <span class="string">mynet</span></div><div class="line"></div><div class="line"><span class="attr">cms:</span></div><div class="line"><span class="attr">  image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat:7-jre8-alpine</span></div><div class="line"><span class="attr">  container_name:</span> <span class="string">cms</span></div><div class="line"><span class="attr">  ports:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">"8887:8080"</span></div><div class="line"><span class="attr">  volumes:</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/workspace/projects/cms/:/usr/local/tomcat/webapps/ROOT</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/cms/tomcat/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="bullet">        -</span> <span class="string">/home/zhaoshg/logs/cms/:/home/logs/cms/</span></div><div class="line"><span class="attr">  net:</span> <span class="string">mynet</span></div></pre></td></tr></table></figure>
-<h3 id="运行-1"><a href="#运行-1" class="headerlink" title="运行"></a>运行</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span>-compose -f ~/workspace/docker-compose-projects.yml up -d</div></pre></td></tr></table></figure>
-<h3 id="查看启动情况-1"><a href="#查看启动情况-1" class="headerlink" title="查看启动情况"></a>查看启动情况</h3><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> ps </div><div class="line"></div><div class="line">CONTAINER ID        IMAGE               COMMAND                  CREATED             STATUS              PORTS                    NAMES</div><div class="line"><span class="number">44</span>c331824b2f        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">0.0</span>.<span class="number">0.0</span>:<span class="number">8888</span>-&gt;<span class="number">8080</span>/tcp   workspace_discenter_1</div><div class="line">b3b5ec77f75a        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">0.0</span>.<span class="number">0.0</span>:<span class="number">8887</span>-&gt;<span class="number">8080</span>/tcp   workspace_cms_1</div><div class="line">f1827893e1b4        <span class="number">43</span>b76557edc3        <span class="string">"catalina.sh run"</span>        <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">8080</span>/tcp                 workspace_rbac_1</div><div class="line"><span class="number">936</span>d6a048068        mysql:<span class="number">5.6</span>.<span class="number">35</span>        <span class="string">"docker-entrypoint..."</span>   <span class="number">2</span> hours ago         Up <span class="number">2</span> hours          <span class="number">3306</span>/tcp                 workspace_mysql_1</div></pre></td></tr></table></figure>
-<h2 id="示例三"><a href="#示例三" class="headerlink" title="示例三"></a>示例三</h2><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div></pre></td><td class="code"><pre><div class="line"><span class="attr">version:</span> <span class="string">'2.1'</span></div><div class="line"></div><div class="line"><span class="attr">services:</span></div><div class="line"><span class="attr">  mysql:</span></div><div class="line"><span class="attr">        image:</span> <span class="string">hub.c.163.com/zhaoshg/mysql:5.6.35</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">mysql</span></div><div class="line"><span class="attr">        volumes:</span></div><div class="line"><span class="bullet">          -</span> <span class="string">/home/zhaoshg/workspace/docker-data/mysql/:/var/lib/mysql/</span></div><div class="line"><span class="attr">        expose:</span></div><div class="line"><span class="bullet">          -</span> <span class="string">"3306"</span></div><div class="line"><span class="attr">        environment:</span></div><div class="line"><span class="bullet">          -</span> <span class="string">MYSQL_ROOT_PASSWORD=yourpassword</span></div><div class="line"><span class="attr">        healthcheck:</span></div><div class="line"><span class="attr">          test:</span> <span class="string">["CMD",</span> <span class="string">"curl"</span><span class="string">,</span> <span class="string">"-f"</span><span class="string">,</span> <span class="string">"http://localhost:3306 || exit 1"</span><span class="string">]</span></div><div class="line"><span class="attr">          interval:</span> <span class="number">10</span><span class="string">s</span></div><div class="line"><span class="attr">          timeout:</span> <span class="number">5</span><span class="string">s</span></div><div class="line"><span class="attr">          retries:</span> <span class="number">3</span></div><div class="line"><span class="comment">#       mem_limit: 256m</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="attr">  memcached:</span></div><div class="line"><span class="attr">        image:</span> <span class="attr">memcached:1.4.36-alpine</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">memcached</span></div><div class="line"><span class="attr">        ports:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"11211:11211"</span></div><div class="line"><span class="attr">        mem_limit:</span> <span class="number">56</span><span class="string">m</span></div><div class="line"></div><div class="line"><span class="attr">  fdfssingle:</span></div><div class="line"><span class="attr">        image:</span> <span class="string">hub.c.163.com/zhaoshg/fastdfs</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">fdfssingle</span></div><div class="line"><span class="attr">        ports:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"22122:22122"</span></div><div class="line"><span class="attr">        volumes:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/fastdfs:/fastdfs</span></div><div class="line"><span class="attr">        mem_limit:</span> <span class="number">200</span><span class="string">m</span></div><div class="line"></div><div class="line"></div><div class="line"><span class="attr">  myweb:</span></div><div class="line"><span class="attr">        image:</span> <span class="string">hub.c.163.com/zhaoshg/tomcat</span></div><div class="line"><span class="attr">        container_name:</span> <span class="string">myweb</span></div><div class="line"><span class="attr">        environment:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">JAVA_OPTS=-Djava.rmi.server.hostname=192.168.2.139</span> <span class="bullet">-Dcom.sun.management.jmxremote=true</span> <span class="bullet">-Dcom.sun.management.jmxremote.local.only=false</span> <span class="bullet">-Dcom.sun.management.jmxremote.port=18900</span> <span class="bullet">-Dcom.sun.management.jmxremote.rmi.port=18901</span> <span class="bullet">-Dcom.sun.management.jmxremote.ssl=false</span> <span class="bullet">-Dcom.sun.management.jmxremote.authenticate=false</span> <span class="bullet">-Xms512m</span> <span class="bullet">-Xmx512m</span></div><div class="line"><span class="attr">        links:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">mysql</span></div><div class="line"><span class="bullet">                -</span> <span class="string">memcached</span></div><div class="line"><span class="attr">        depends_on:</span></div><div class="line"><span class="attr">          mysql:</span></div><div class="line"><span class="attr">                condition:</span> <span class="string">service_healthy</span></div><div class="line"><span class="attr">          memcached:</span></div><div class="line"><span class="attr">                condition:</span> <span class="string">service_started</span></div><div class="line"><span class="attr">        ports:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"8100:8080"</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"18900:18900"</span></div><div class="line"><span class="bullet">                -</span> <span class="string">"18901:18901"</span></div><div class="line"><span class="attr">        volumes:</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/workspace/projects/discenter/:/usr/local/tomcat/webapps/ROOT</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/logs/discenter/tomcat/:/usr/local/tomcat/logs/</span></div><div class="line"><span class="bullet">                -</span> <span class="string">/home/zhaoshg/logs/discenter/web/:/home/logs/discenter/</span></div><div class="line"><span class="attr">        healthcheck:</span></div><div class="line"><span class="attr">          test:</span> <span class="string">curl</span> <span class="bullet">-f</span> <span class="attr">http://localhost:8080/favicon.ico</span> <span class="string">||</span> <span class="string">exit</span> <span class="number">1</span></div><div class="line"><span class="attr">          interval:</span> <span class="number">30</span><span class="string">s</span></div><div class="line"><span class="attr">          timeout:</span> <span class="number">5</span><span class="string">s</span></div><div class="line"><span class="attr">          retries:</span> <span class="number">3</span></div></pre></td></tr></table></figure>
-<p>参考:<br><a href="http://docs.docker.com/compose/" target="_blank" rel="external">Compose Document</a></p>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。&lt;/p&gt;
-&lt;h1 id=&quot;1-安装Docker和Compose&quot;&gt;&lt;a href=&quot;#1-安装Docker和Compose&quot; class=&quot;headerlink&quot; title=&quot;1. 安装Docker和Compose&quot;&gt;&lt;/a&gt;1. 安装Docker和Compose&lt;/h1&gt;&lt;p&gt;   Compose是用于定义和运行复杂Docker应用的工具。你可以在一个文件中定义一个多容器的应用，然后使用一条命令来启动你的应用，然后所有相关的操作都会被自动完成。&lt;/p&gt;
-&lt;h2 id=&quot;安装&quot;&gt;&lt;a href=&quot;#安装&quot; class=&quot;headerlink&quot; title=&quot;安装&quot;&gt;&lt;/a&gt;安装&lt;/h2&gt;&lt;figure class=&quot;highlight ps&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;1&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;2&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;3&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;variable&quot;&gt;$curl&lt;/span&gt; -L &lt;span class=&quot;string&quot;&gt;&quot;https://github.com/docker/compose/releases/download/1.11.2/docker-compose-$(uname -s)-$(uname -m)&quot;&lt;/span&gt; -o /usr/local/bin/docker-compose&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;    &lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;variable&quot;&gt;$chmod&lt;/span&gt; +x /usr/local/bin/docker-compose&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-    
-    </summary>
-    
-      <category term="docker" scheme="http://www.javacn.top/categories/docker/"/>
-    
-    
-      <category term="docker" scheme="http://www.javacn.top/tags/docker/"/>
-    
-      <category term="docker-compose" scheme="http://www.javacn.top/tags/docker-compose/"/>
     
   </entry>
   
