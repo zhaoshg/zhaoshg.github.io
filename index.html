@@ -315,6 +315,590 @@
   
 
   <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170505/lock-free_queue/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/20170505/lock-free_queue/" itemprop="url">
+                  无锁队列的实现
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-05-05T15:44:58+08:00">
+                2017-05-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/20170505/lock-free_queue/" class="leancloud_visitors" data-flag-title="无锁队列的实现">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  2,576
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  10
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>关于无锁队列的实现，网上有很多文章，虽然本文可能和那些文章有所重复，但是我还是想以我自己的方式把这些文章中的重要的知识点串起来和大家讲一讲这个技术。下面开始正文。</p>
+<h1 id="关于CAS等原子操作"><a href="#关于CAS等原子操作" class="headerlink" title="关于CAS等原子操作"></a>关于CAS等原子操作</h1><p>在开始说无锁队列之前，我们需要知道一个很重要的技术就是CAS操作——Compare &amp; Set，或是 Compare &amp; Swap，<strong>现在几乎所有的CPU指令都支持CAS的原子操作</strong>，X86下对应的是 <strong>CMPXCHG</strong>汇编指令。有了这个原子操作，我们就可以用其来实现各种无锁（lock free）的数据结构。<br>这个操作用C语言来描述就是下面这个样子：（代码来自<a href="http://en.wikipedia.org/wiki/Compare-and-swap">Wikipedia的Compare And Swap</a>词条）意思就是说，看一看内存*reg里的值是不是oldval，如果是的话，则对其赋值newval。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">compare_and_swap</span> <span class="params">(<span class="keyword">int</span>* reg, <span class="keyword">int</span> oldval, <span class="keyword">int</span> newval)</span></div><div class="line"></span>&#123;</div><div class="line">  <span class="keyword">int</span> old_reg_val = *reg;</div><div class="line">  <span class="keyword">if</span> (old_reg_val == oldval)</div><div class="line">     *reg = newval;</div><div class="line">  <span class="keyword">return</span> old_reg_val;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这个操作可以变种为返回bool值的形式（返回 bool值的好处在于，可以调用者知道有没有更新成功）：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">bool</span> <span class="title">compare_and_swap</span> <span class="params">(<span class="keyword">int</span> *accum, <span class="keyword">int</span> *dest, <span class="keyword">int</span> newval)</span></div><div class="line"></span>&#123;</div><div class="line">  <span class="keyword">if</span> ( *accum == *dest ) &#123;</div><div class="line">      *dest = newval;</div><div class="line">      <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">  &#125;</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>与CAS相似的还有下面的原子操作：（这些东西大家自己看Wikipedia吧）</p>
+<ul>
+<li>Fetch And Add，一般用来对变量做 +1 的原子操作</li>
+<li>Test-and-set，写值到某个内存位置并传回其旧值。汇编指令BST</li>
+<li>Test and Test-and-set，用来低低Test-and-Set的资源争夺情况<br><strong>注</strong>：在实际的C/C++程序中，CAS的各种实现版本如下：</li>
+</ul>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/20170505/lock-free_queue/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170505/java-hashmap-infinite-loop/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/20170505/java-hashmap-infinite-loop/" itemprop="url">
+                  JAVA HASHMAP的死循环
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-05-05T14:58:17+08:00">
+                2017-05-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/20170505/java-hashmap-infinite-loop/" class="leancloud_visitors" data-flag-title="JAVA HASHMAP的死循环">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  1,620
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  6
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>在淘宝内网里看到同事发了贴说了一个CPU被100%的线上故障，并且这个事发生了很多次，原因是在Java语言在并发情况下使用HashMap造成Race Condition，从而导致死循环。这个事情我4、5年前也经历过，本来觉得没什么好写的，因为Java的HashMap是非线程安全的，所以在并发下必然出现问题。但是，我发现近几年，很多人都经历过这个事（在网上查“HashMap Infinite Loop”可以看到很多人都在说这个事）所以，觉得这个是个普遍问题，需要写篇疫苗文章说一下这个事，并且给大家看看一个完美的“Race Condition”是怎么形成的。</p>
+<h1 id="问题的症状"><a href="#问题的症状" class="headerlink" title="问题的症状"></a>问题的症状</h1><p>从前我们的Java代码因为一些原因使用了HashMap这个东西，但是当时的程序是单线程的，一切都没有问题。后来，我们的程序性能有问题，所以需要变成多线程的，于是，变成多线程后到了线上，发现程序经常占了100%的CPU，查看堆栈，你会发现程序都Hang在了HashMap.get()这个方法上了，重启程序后问题消失。但是过段时间又会来。而且，这个问题在测试环境里可能很难重现。</p>
+<p>我们简单的看一下我们自己的代码，我们就知道HashMap被多个线程操作。而Java的文档说HashMap是非线程安全的，应该用ConcurrentHashMap。</p>
+<p>但是在这里我们可以来研究一下原因。</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/20170505/java-hashmap-infinite-loop/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170505/Lock-Free_Hash_Tables/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/20170505/Lock-Free_Hash_Tables/" itemprop="url">
+                  无锁HASHMAP的原理与实现
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-05-05T14:56:32+08:00">
+                2017-05-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+          
+
+          
+          
+             <span id="/20170505/Lock-Free_Hash_Tables/" class="leancloud_visitors" data-flag-title="无锁HASHMAP的原理与实现">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  2,273
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  8
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>在《<a href="../java-hashmap-infinite-loop">疫苗：Java HashMap的死循环</a>》中，我们看到，java.util.HashMap并不能直接应用于多线程环境。对于多线程环境中应用HashMap，主要有以下几种选择：</p>
+<ol>
+<li>使用线程安全的java.util.Hashtable作为替代。</li>
+<li>使用java.util.Collections.synchronizedMap方法，将已有的HashMap对象包装为线程安全的。</li>
+<li>使用java.util.concurrent.ConcurrentHashMap类作为替代，它具有非常好的性能。</li>
+</ol>
+<p>而以上几种方法在实现的具体细节上，都或多或少地用到了互斥锁。互斥锁会造成线程阻塞，降低运行效率，并有可能产生死锁、优先级翻转等一系列问题。</p>
+<p>CAS(Compare And Swap)是一种底层硬件提供的功能，它可以将判断并更改一个值的操作原子化。关于CAS的一些应用，《<a href="../lock-free_queue">无锁队列的实现</a>》一文中有很详细的介绍。</p>
+<h1 id="Java中的原子操作"><a href="#Java中的原子操作" class="headerlink" title="Java中的原子操作"></a>Java中的原子操作</h1><p>在java.util.concurrent.atomic包中，Java为我们提供了很多方便的原子类型，它们底层完全基于CAS操作。</p>
+<p>例如我们希望实现一个全局公用的计数器，那么可以：</p>
+          <!--noindex-->
+          <div class="post-button text-center">
+            <a class="btn" href="/20170505/Lock-Free_Hash_Tables/#more" rel="contents">
+              阅读全文 &raquo;
+            </a>
+          </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
     <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170505/transaction_distributed_system/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
@@ -418,7 +1002,7 @@
                   <span class="post-meta-item-text">字数统计</span>
                 
                 <span title="字数统计">
-                  8,319
+                  8,317
                 </span>
               
 
@@ -464,7 +1048,6 @@
 <li><strong>数据分区</strong>：就是把数据分块放在不同的服务器上（如：uid % 16，一致性哈希等）。</li>
 <li><strong>数据镜像</strong>：让所有的服务器都有相同的数据，提供相当的服务。</li>
 </ol>
-<p>$y^i$</p>
           <!--noindex-->
           <div class="post-button text-center">
             <a class="btn" href="/20170505/transaction_distributed_system/#more" rel="contents">
@@ -1711,578 +2294,6 @@
 
 
     
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170427/data_structure_queue/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="曙光">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/face.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="荆棘之路">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/20170427/data_structure_queue/" itemprop="url">
-                  实际项目中数据结构—队列的应用
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-27T09:07:13+08:00">
-                2017-04-27
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/数据结构与算法/" itemprop="url" rel="index">
-                    <span itemprop="name">数据结构与算法</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/20170427/data_structure_queue/" class="leancloud_visitors" data-flag-title="实际项目中数据结构—队列的应用">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-            <div class="post-wordcount">
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-file-word-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">字数统计</span>
-                
-                <span title="字数统计">
-                  1,179
-                </span>
-              
-
-              
-                <span class="post-meta-divider">|</span>
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-clock-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">阅读时长</span>
-                
-                <span title="阅读时长">
-                  4
-                </span>
-              
-            </div>
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body han-init-context" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h1 id="队列："><a href="#队列：" class="headerlink" title="队列："></a>队列：</h1><p><strong>一种数据结构，有非阻塞对列和阻塞对列</strong>  </p>
-<p><strong>特点</strong>：先进先出 </p>
-<p><strong>两种典型操作</strong>：队尾添加、队头删除</p>
-<p><strong>非阻塞对列</strong>：当对列满或空时进行插入或者读取删除操作，抛出异常或者返回false,不对当前线程阻塞，没有同步或者唤醒策略。</p>
-<p><strong>阻塞对列</strong>：当队列是空的时，从队列中获取元素的操作将会被阻塞，或者当队列是满时，往队列里添加元素的操作会被阻塞。</p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/20170427/data_structure_queue/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170425/leopold_fc660m_cons/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="曙光">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/face.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="荆棘之路">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/20170425/leopold_fc660m_cons/" itemprop="url">
-                  小身材，大味道——Leopold FC660M铝板红轴机械键盘简评
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-25T18:27:50+08:00">
-                2017-04-25
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/硬件/" itemprop="url" rel="index">
-                    <span itemprop="name">硬件</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/20170425/leopold_fc660m_cons/" class="leancloud_visitors" data-flag-title="小身材，大味道——Leopold FC660M铝板红轴机械键盘简评">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-            <div class="post-wordcount">
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-file-word-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">字数统计</span>
-                
-                <span title="字数统计">
-                  3,649
-                </span>
-              
-
-              
-                <span class="post-meta-divider">|</span>
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-clock-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">阅读时长</span>
-                
-                <span title="阅读时长">
-                  13
-                </span>
-              
-            </div>
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body han-init-context" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h1 id="介绍"><a href="#介绍" class="headerlink" title="介绍"></a>介绍</h1><p>标题借用一下某副食品广告的宣传语。用过手中这块Leopold的FC660M新款铝板红轴机械键盘后，除了“小身材，大味道”，实在是找不出更为贴切的用词来形容它了：<strong>紧凑的键位，却能尝出远超一般紧凑键盘的味道。</strong></p>
-<p>Leopold这个品牌，以及代理FC660M等型号产品的志海和团队楼主不多做介绍，前人之述备矣，估计多数玩家对此比楼主更加熟悉。FC660M属于系列中比较流行，有一定保有量的一个型号，除了产品自身的品质，在外壳、键帽、轴型等方面的刻意求工和可DIY性都是量产键盘中非常少见的，也是为FC660M加分的砝码。</p>
-<p>这次的新品，实际上是Leopold升级的一批彩色铝板FC660M，旨在用彩铝板进一步提升细节上的感觉，同时在保持机械质感的基础上尽可能让键盘变得更轻便。外壳颜色有蓝色、纯白和香槟金等，据称铝板颜色与外壳一致。轴型增加了Cherry MX红轴。楼主手中这块为样品，不能保证与市售产品完全一致，文字将以介绍为主，当中会夹杂一些主观的评价，请各位各取所需，顺便欢迎互喷。</p>
-<p>早期的FC660M是有蓝黑色封套的，后来全部更换为无图案的牛皮瓦楞纸包装盒，用的纸板材质很硬，盒子折线棱角非常凌厉，整体倒是多了几分复古的美感。其实这种风格上的简化是受不少人欢迎的，因为封套这玩意大多是见光死，而且对于以后的收纳取用来说就是个累赘。<br>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/20170425/leopold_fc660m_cons/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170421/regular_java_3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="曙光">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/face.jpg">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="荆棘之路">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/20170421/regular_java_3/" itemprop="url">
-                  Java正则速成秘籍（三）之见招拆招篇
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">发表于</span>
-              
-              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-04-21T18:47:07+08:00">
-                2017-04-21
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-            <span class="post-category" >
-            
-              <span class="post-meta-divider">|</span>
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">分类于</span>
-              
-              
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/正则/" itemprop="url" rel="index">
-                    <span itemprop="name">正则</span>
-                  </a>
-                </span>
-
-                
-                
-              
-            </span>
-          
-
-          
-            
-          
-
-          
-          
-             <span id="/20170421/regular_java_3/" class="leancloud_visitors" data-flag-title="Java正则速成秘籍（三）之见招拆招篇">
-               <span class="post-meta-divider">|</span>
-               <span class="post-meta-item-icon">
-                 <i class="fa fa-eye"></i>
-               </span>
-               
-                 <span class="post-meta-item-text">阅读次数 </span>
-               
-                 <span class="leancloud-visitors-count"></span>
-             </span>
-          
-
-          
-
-          
-            <div class="post-wordcount">
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-file-word-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">字数统计</span>
-                
-                <span title="字数统计">
-                  2,891
-                </span>
-              
-
-              
-                <span class="post-meta-divider">|</span>
-              
-
-              
-                <span class="post-meta-item-icon">
-                  <i class="fa fa-clock-o"></i>
-                </span>
-                
-                  <span class="post-meta-item-text">阅读时长</span>
-                
-                <span title="阅读时长">
-                  13
-                </span>
-              
-            </div>
-          
-
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body han-init-context" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h1 id="导读"><a href="#导读" class="headerlink" title="导读"></a>导读</h1><p><strong>正则表达式是什么？有什么用？</strong><br>正则表达式(Regular Expression)是一种文本规则，可以用来校验、查找、替换与规则匹配的文本。<br><strong>又爱又恨的正则</strong><br>正则表达式是一个强大的文本匹配工具，但是它的规则实在很繁琐，而且理解起来也颇为蛋疼，容易让人望而生畏。<br><strong>如何学习正则</strong><br>刚接触正则时，我看了一堆正则的语义说明，但是仍然不明所以。后来，我多接触一些正则的应用实例，渐渐有了感觉，再结合语义说明，终有领悟。我觉得正则表达式和武侠修练武功差不多，应该先练招式，再练心法。如果一开始就直接看正则的规则，保证你会懵逼。<br>当你熟悉基本招式（正则基本使用案例）后，也该修炼修炼心法（正则语法）了。真正的高手不能只靠死记硬背那么几招把式。就像张三丰教张无忌太极拳一样，领悟心法，融会贯通，少侠你就可以无招胜有招，成为传说中的绝世高手。</p>
-<p><strong>以上闲话可归纳为一句：学习正则应该从实例去理解规则。</strong></p>
-          <!--noindex-->
-          <div class="post-button text-center">
-            <a class="btn" href="/20170421/regular_java_3/#more" rel="contents">
-              阅读全文 &raquo;
-            </a>
-          </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -2332,7 +2343,7 @@
           
             <div class="site-state-item site-state-posts">
               <a href="/archives">
-                <span class="site-state-item-count">26</span>
+                <span class="site-state-item-count">29</span>
                 <span class="site-state-item-name">日志</span>
               </a>
             </div>
@@ -2354,7 +2365,7 @@
             
             <div class="site-state-item site-state-tags">
               <a href="/tags/index.html">
-                <span class="site-state-item-count">41</span>
+                <span class="site-state-item-count">46</span>
                 <span class="site-state-item-name">标签</span>
               </a>
             </div>

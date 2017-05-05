@@ -1,0 +1,1218 @@
+<!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="荆棘之路" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="在《疫苗：Java HashMap的死循环》中，我们看到，java.util.HashMap并不能直接应用于多线程环境。对于多线程环境中应用HashMap，主要有以下几种选择：  使用线程安全的java.util.Hashtable作为替代。 使用java.util.Collections.synchronizedMap方法，将已有的HashMap对象包装为线程安全的。 使用java.util.c">
+<meta name="keywords" content="java,转载,hashmap,并发,数据结构与算法,lock-free">
+<meta property="og:type" content="article">
+<meta property="og:title" content="无锁HASHMAP的原理与实现">
+<meta property="og:url" content="http://www.javacn.top/20170505/Lock-Free_Hash_Tables/index.html">
+<meta property="og:site_name" content="荆棘之路">
+<meta property="og:description" content="在《疫苗：Java HashMap的死循环》中，我们看到，java.util.HashMap并不能直接应用于多线程环境。对于多线程环境中应用HashMap，主要有以下几种选择：  使用线程安全的java.util.Hashtable作为替代。 使用java.util.Collections.synchronizedMap方法，将已有的HashMap对象包装为线程安全的。 使用java.util.c">
+<meta property="og:image" content="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/1-3.jpg">
+<meta property="og:image" content="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/4.jpg">
+<meta property="og:image" content="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/5-6.jpg">
+<meta property="og:image" content="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/7.jpg">
+<meta property="og:updated_time" content="2017-05-05T08:08:22.787Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="无锁HASHMAP的原理与实现">
+<meta name="twitter:description" content="在《疫苗：Java HashMap的死循环》中，我们看到，java.util.HashMap并不能直接应用于多线程环境。对于多线程环境中应用HashMap，主要有以下几种选择：  使用线程安全的java.util.Hashtable作为替代。 使用java.util.Collections.synchronizedMap方法，将已有的HashMap对象包装为线程安全的。 使用java.util.c">
+<meta name="twitter:image" content="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/1-3.jpg">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.javacn.top/20170505/Lock-Free_Hash_Tables/"/>
+
+
+
+
+
+  <title> 无锁HASHMAP的原理与实现 | 荆棘之路 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-98173663-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?0a667b2d82398abb1dcb34b2b09ca44a";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">荆棘之路</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Just Do It !</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off"
+             placeholder="搜索..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170505/Lock-Free_Hash_Tables/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                无锁HASHMAP的原理与实现
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-05-05T14:56:32+08:00">
+                2017-05-05
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a class="cloud-tie-join-count" href="/20170505/Lock-Free_Hash_Tables/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count join-count" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/20170505/Lock-Free_Hash_Tables/" class="leancloud_visitors" data-flag-title="无锁HASHMAP的原理与实现">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  2,273
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  8
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>在《<a href="../java-hashmap-infinite-loop">疫苗：Java HashMap的死循环</a>》中，我们看到，java.util.HashMap并不能直接应用于多线程环境。对于多线程环境中应用HashMap，主要有以下几种选择：</p>
+<ol>
+<li>使用线程安全的java.util.Hashtable作为替代。</li>
+<li>使用java.util.Collections.synchronizedMap方法，将已有的HashMap对象包装为线程安全的。</li>
+<li>使用java.util.concurrent.ConcurrentHashMap类作为替代，它具有非常好的性能。</li>
+</ol>
+<p>而以上几种方法在实现的具体细节上，都或多或少地用到了互斥锁。互斥锁会造成线程阻塞，降低运行效率，并有可能产生死锁、优先级翻转等一系列问题。</p>
+<p>CAS(Compare And Swap)是一种底层硬件提供的功能，它可以将判断并更改一个值的操作原子化。关于CAS的一些应用，《<a href="../lock-free_queue">无锁队列的实现</a>》一文中有很详细的介绍。</p>
+<h1 id="Java中的原子操作"><a href="#Java中的原子操作" class="headerlink" title="Java中的原子操作"></a>Java中的原子操作</h1><p>在java.util.concurrent.atomic包中，Java为我们提供了很多方便的原子类型，它们底层完全基于CAS操作。</p>
+<p>例如我们希望实现一个全局公用的计数器，那么可以：</p>
+<a id="more"></a>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">private</span> AtomicInteger counter = <span class="keyword">new</span> AtomicInteger(<span class="number">3</span>);</div><div class="line"> </div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addCounter</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">for</span> (;;) &#123;</div><div class="line">        <span class="keyword">int</span> oldValue = counter.get();</div><div class="line">        <span class="keyword">int</span> newValue = oldValue + <span class="number">1</span>;</div><div class="line">        <span class="keyword">if</span> (counter.compareAndSet(oldValue, newValue))</div><div class="line">            <span class="keyword">return</span>;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>其中，compareAndSet方法会检查counter现有的值是否为oldValue，如果是，则将其设置为新值newValue，操作成功并返回true；否则操作失败并返回false。</p>
+<p>当计算counter新值时，若其他线程将counter的值改变，compareAndSwap就会失败。此时我们只需在外面加一层循环，不断尝试这个过程，那么最终一定会成功将counter值+1。（其实AtomicInteger已经为常用的+1/-1操作定义了incrementAndGet与decrementAndGet方法，以后我们只需简单调用它即可）</p>
+<p>除了AtomicInteger外，java.util.concurrent.atomic包还提供了AtomicReference和AtomicReferenceArray类型，它们分别代表原子性的引用和原子性的引用数组（引用的数组）。</p>
+<h1 id="无锁链表的实现"><a href="#无锁链表的实现" class="headerlink" title="无锁链表的实现"></a>无锁链表的实现</h1><p>在实现无锁HashMap之前，让我们先来看一下比较简单的无锁链表的实现方法。</p>
+<p>以插入操作为例：</p>
+<ol>
+<li>首先我们需要找到待插入位置前面的节点A和后面的节点B。</li>
+<li>然后新建一个节点C，并使其next指针指向节点B。（见图1）</li>
+<li>最后使节点A的next指针指向节点C。（见图2）<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/1-3.jpg" alt=""><br>但在操作中途，有可能其他线程在A与B直接也插入了一些节点（假设为D），如果我们不做任何判断，可能造成其他线程插入节点的丢失。（见图3）我们可以利用CAS操作，在为节点A的next指针赋值时，判断其是否仍然指向B，如果节点A的next指针发生了变化则重试整个插入操作。大致代码如下：<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">listInsert</span><span class="params">(Node head, Node c)</span> </span>&#123;</div><div class="line">    <span class="keyword">for</span> (;;) &#123;</div><div class="line">        Node a = findInsertionPlace(head), b = a.next.get();</div><div class="line">        c.next.set(b);</div><div class="line">        <span class="keyword">if</span> (a.next.compareAndSwap(b,c))</div><div class="line">            <span class="keyword">return</span>;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>(Node类的next字段为AtomicReference<node>类型，即指向Node类型的原子性引用)</node></p>
+<p>无锁链表的查找操作与普通链表没有区别。而其删除操作，则需要找到待删除节点前方的节点A和后方的节点B，利用CAS操作验证并更新节点A的next指针，使其指向节点B。</p>
+<h1 id="无锁HashMap的难点与突破"><a href="#无锁HashMap的难点与突破" class="headerlink" title="无锁HashMap的难点与突破"></a>无锁HashMap的难点与突破</h1><p>HashMap主要有<strong>插入</strong>、<strong>删除</strong>、<strong>查找</strong>以及<strong>ReHash</strong>四种基本操作。一个典型的HashMap实现，会用到一个数组，数组的每项元素为一个节点的链表。对于此链表，我们可以利用上文提到的操作方法，执行插入、删除以及查找操作，但对于ReHash操作则比较困难。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/4.jpg" alt=""><br>如图4，在ReHash过程中，一个典型的操作是遍历旧表中的每个节点，计算其在新表中的位置，然后将其移动至新表中。期间我们需要操纵3次指针：</p>
+<ol>
+<li>将A的next指针指向D</li>
+<li>将B的next指针指向C</li>
+<li>将C的next指针指向E</li>
+</ol>
+<p>而这三次指针操作必须同时完成，才能保证移动操作的原子性。但我们不难看出，CAS操作每次只能保证一个变量的值被原子性地验证并更新，无法满足同时验证并更新三个指针的需求。</p>
+<p>于是我们不妨换一个思路，既然移动节点的操作如此困难，我们可以使所有节点始终保持有序状态，从而避免了移动操作。在典型的HashMap实现中，数组的长度始终保持为$2^i$，而从Hash值映射为数组下标的过程，只是简单地对数组长度执行取模运算（即仅保留Hash二进制的后i位）。当ReHash时，数组长度加倍变为$2^{i+1}$，旧数组第j项链表中的每个节点，要么移动到新数组中第j项，要么移动到新数组中第$j+2^i$项，而它们的唯一区别在于Hash值第i+1位的不同（第i+1位为0则仍为第j项，否则为第$j+2^i$项）。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/5-6.jpg" alt=""><br>如图5，我们将所有节点按照Hash值的翻转位序（如1101-&gt;1011）由小到大排列。当数组大小为8时，2、18在一个组内；3、11、27在另一个组内。每组的开始，插入一个哨兵节点，以方便后续操作。为了使哨兵节点正确排在组的最前方，我们将正常节点Hash的最高位（翻转后变为最低位）置为1，而哨兵节点不设置这一位。</p>
+<p>当数组扩容至16时（见图6），第二组分裂为一个只含3的组和一个含有11、27的组，但节点之间的相对顺序并未改变。这样在ReHash时，我们就不需要移动节点了。</p>
+<h1 id="实现细节"><a href="#实现细节" class="headerlink" title="实现细节"></a>实现细节</h1><p>由于扩容时数组的复制会占用大量的时间，这里我们采用了将整个数组分块，懒惰建立的方法。这样，当访问到某下标时，仅需判断此下标所在块是否已建立完毕（如果没有则建立）。</p>
+<p>另外定义size为当前已使用的下标范围，其初始值为2，数组扩容时仅需将size加倍即可；定义count代表目前HashMap中包含的总节点个数（不算哨兵节点）。</p>
+<p>初始时，数组中除第0项外，所有项都为null。第0项指向一个仅有一个哨兵节点的链表，代表整条链的起点。初始时全貌见图7，其中浅绿色代表当前未使用的下标范围，虚线箭头代表逻辑上存在，但实际未建立的块。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/7.jpg" alt=""></p>
+<h2 id="初始化下标操作"><a href="#初始化下标操作" class="headerlink" title="初始化下标操作"></a>初始化下标操作</h2><p>数组中为null的项都认为处于未初始化状态，初始化某个下标即代表建立其对应的哨兵节点。初始化是递归进行的，即若其父下标未初始化，则先初始化其父下标。（一个下标的父下标是其移除最高二进制位后得到的下标）大致代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initializeBucket</span><span class="params">(<span class="keyword">int</span> bucketIdx)</span> </span>&#123;</div><div class="line">    <span class="keyword">int</span> parentIdx = bucketIdx ^ Integer.highestOneBit(bucketIdx);</div><div class="line">    <span class="keyword">if</span> (getBucket(parentIdx) == <span class="keyword">null</span>)</div><div class="line">        initializeBucket(parentIdx);</div><div class="line"> </div><div class="line">    Node dummy = <span class="keyword">new</span> Node();</div><div class="line">    dummy.hash = Integer.reverse(bucketIdx);</div><div class="line">    dummy.next = <span class="keyword">new</span> AtomicReference&amp;lt;&amp;gt;();</div><div class="line"> </div><div class="line">    setBucket(bucketIdx, listInsert(getBucket(parentIdx), dummy));</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>其中getBucket即封装过的获取数组某下标内容的方法，setBucket同理。listInsert将从指定位置开始查找适合插入的位置插入给定的节点，若链表中已存在hash相同的节点则返回那个已存在的节点；否则返回新插入的节点。</p>
+<h2 id="插入操作"><a href="#插入操作" class="headerlink" title="插入操作"></a>插入操作</h2><ul>
+<li>首先用HashMap的size对键的hashCode取模，得到应插入的数组下标。</li>
+<li>然后判断该下标处是否为null，如果为null则初始化此下标。</li>
+<li>构造一个新的节点，并插入到适当位置，注意节点中的hash值应为原hashCode经过位翻转并将最低位置1之后的值。</li>
+<li>将节点个数计数器加1，若加1后节点过多，则仅需将size改为size*2，代表对数组扩容（ReHash）。</li>
+</ul>
+<h2 id="查找操作"><a href="#查找操作" class="headerlink" title="查找操作"></a>查找操作</h2><ul>
+<li>找出待查找节点在数组中的下标。</li>
+<li>判断该下标处是否为null，如果为null则返回查找失败。</li>
+<li>从相应位置进入链表，顺次寻找，直至找出待查找节点或超出本组节点范围。</li>
+</ul>
+<h2 id="删除操作"><a href="#删除操作" class="headerlink" title="删除操作"></a>删除操作</h2><ul>
+<li>找出应删除节点在数组中的下标。</li>
+<li>判断该下标处是否为null，如果为null则初始化此下标。</li>
+<li>找到待删除节点，并从链表中删除。（注意由于哨兵节点的存在，任何正常元素只被其唯一的前驱节点所引用，不存在被前驱节点与数组中指针同时引用的情况，从而不会出现需要同时修改多个指针的情况）</li>
+<li>将节点个数计数器减1。</li>
+</ul>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>《<a href="http://www.cs.ucf.edu/~dcm/Teaching/COT4810-Spring2011/Literature/SplitOrderedLists.pdf" target="_blank" rel="external">Split-Ordered Lists: Lock-Free Extensible Hash Tables</a>》</p>
+<p>本文转载自：<a href="http://coolshell.cn/articles/9703.html" target="_blank" rel="external">酷 壳</a></p>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/java/" rel="tag"># java</a>
+          
+            <a href="/tags/转载/" rel="tag"># 转载</a>
+          
+            <a href="/tags/hashmap/" rel="tag"># hashmap</a>
+          
+            <a href="/tags/并发/" rel="tag"># 并发</a>
+          
+            <a href="/tags/数据结构与算法/" rel="tag"># 数据结构与算法</a>
+          
+            <a href="/tags/lock-free/" rel="tag"># lock-free</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+              <a href="/20170505/java-hashmap-infinite-loop/" rel="next" title="JAVA HASHMAP的死循环">
+                <i class="fa fa-chevron-left"></i> JAVA HASHMAP的死循环
+              </a>
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/20170505/transaction_distributed_system/" rel="prev" title="分布式系统的事务处理">
+                分布式系统的事务处理 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+        <ul class="sidebar-nav motion-element">
+          <li class="sidebar-nav-toc sidebar-nav-active" data-target="post-toc-wrap" >
+            文章目录
+          </li>
+          <li class="sidebar-nav-overview" data-target="site-overview">
+            站点概览
+          </li>
+        </ul>
+      
+
+      <section class="site-overview sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/face.jpg"
+               alt="曙光" />
+          <p class="site-author-name" itemprop="name">曙光</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">29</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">9</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">46</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/zhaoshg" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a rel="external nofollow" href="http://www.nongrj.com/" title="农仁街" target="_blank">农仁街</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+      <!--noindex-->
+        <section class="post-toc-wrap motion-element sidebar-panel sidebar-panel-active">
+          <div class="post-toc">
+
+            
+              
+            
+
+            
+              <div class="post-toc-content"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#Java中的原子操作"><span class="nav-number">1.</span> <span class="nav-text">Java中的原子操作</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#无锁链表的实现"><span class="nav-number">2.</span> <span class="nav-text">无锁链表的实现</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#无锁HashMap的难点与突破"><span class="nav-number">3.</span> <span class="nav-text">无锁HashMap的难点与突破</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#实现细节"><span class="nav-number">4.</span> <span class="nav-text">实现细节</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#初始化下标操作"><span class="nav-number">4.1.</span> <span class="nav-text">初始化下标操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#插入操作"><span class="nav-number">4.2.</span> <span class="nav-text">插入操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#查找操作"><span class="nav-number">4.3.</span> <span class="nav-text">查找操作</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#删除操作"><span class="nav-number">4.4.</span> <span class="nav-text">删除操作</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#参考文献"><span class="nav-number">5.</span> <span class="nav-text">参考文献</span></a></li></ol></div>
+            
+
+          </div>
+        </section>
+      <!--/noindex-->
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" align="center">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">曙光</span>
+</div>
+<!--
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+-->
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fastclick/1.0.6/fastclick.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+    
+    <script>
+      var cloudTieConfig = {
+        url: document.location.href, 
+        sourceId: "",
+        productKey: "66baac132d9b4e38acd9a0a664710c6f",
+        target: "cloud-tie-wrapper"
+      };
+    </script>
+    <script src="https://img1.ws.126.net/f2e/tie/yun/sdk/loader.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("HofnnMS813HyOHPUrN3wmNkQ-gzGzoHsz", "mL2pwohDw3hUOwrR9jaBs553");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Config({
+        tex2jax: {
+          inlineMath: [ ['$','$'], ["\\(","\\)"]  ],
+          processEscapes: true,
+          skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+        }
+      });
+    </script>
+
+    <script type="text/x-mathjax-config">
+      MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for (i=0; i < all.length; i += 1) {
+          all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+      });
+    </script>
+    <script type="text/javascript" src="//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+  
+
+
+  
+
+  
+
+</body>
+</html>

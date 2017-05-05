@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://www.javacn.top/"/>
-  <updated>2017-05-05T06:54:44.184Z</updated>
+  <updated>2017-05-05T08:07:30.708Z</updated>
   <id>http://www.javacn.top/</id>
   
   <author>
@@ -16,11 +16,303 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>无锁队列的实现</title>
+    <link href="http://www.javacn.top/20170505/lock-free_queue/"/>
+    <id>http://www.javacn.top/20170505/lock-free_queue/</id>
+    <published>2017-05-05T07:44:58.000Z</published>
+    <updated>2017-05-05T08:07:30.708Z</updated>
+    
+    <content type="html"><![CDATA[<p>关于无锁队列的实现，网上有很多文章，虽然本文可能和那些文章有所重复，但是我还是想以我自己的方式把这些文章中的重要的知识点串起来和大家讲一讲这个技术。下面开始正文。</p>
+<h1 id="关于CAS等原子操作"><a href="#关于CAS等原子操作" class="headerlink" title="关于CAS等原子操作"></a>关于CAS等原子操作</h1><p>在开始说无锁队列之前，我们需要知道一个很重要的技术就是CAS操作——Compare &amp; Set，或是 Compare &amp; Swap，<strong>现在几乎所有的CPU指令都支持CAS的原子操作</strong>，X86下对应的是 <strong>CMPXCHG</strong>汇编指令。有了这个原子操作，我们就可以用其来实现各种无锁（lock free）的数据结构。<br>这个操作用C语言来描述就是下面这个样子：（代码来自<a href="http://en.wikipedia.org/wiki/Compare-and-swap" target="_blank" rel="external">Wikipedia的Compare And Swap</a>词条）意思就是说，看一看内存*reg里的值是不是oldval，如果是的话，则对其赋值newval。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">int</span> <span class="title">compare_and_swap</span> <span class="params">(<span class="keyword">int</span>* reg, <span class="keyword">int</span> oldval, <span class="keyword">int</span> newval)</span></span></div><div class="line">&#123;</div><div class="line">  <span class="keyword">int</span> old_reg_val = *reg;</div><div class="line">  <span class="keyword">if</span> (old_reg_val == oldval)</div><div class="line">     *reg = newval;</div><div class="line">  <span class="keyword">return</span> old_reg_val;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>这个操作可以变种为返回bool值的形式（返回 bool值的好处在于，可以调用者知道有没有更新成功）：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">bool</span> <span class="title">compare_and_swap</span> <span class="params">(<span class="keyword">int</span> *accum, <span class="keyword">int</span> *dest, <span class="keyword">int</span> newval)</span></span></div><div class="line">&#123;</div><div class="line">  <span class="keyword">if</span> ( *accum == *dest ) &#123;</div><div class="line">      *dest = newval;</div><div class="line">      <span class="keyword">return</span> <span class="literal">true</span>;</div><div class="line">  &#125;</div><div class="line">  <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>与CAS相似的还有下面的原子操作：（这些东西大家自己看Wikipedia吧）</p>
+<ul>
+<li>Fetch And Add，一般用来对变量做 +1 的原子操作</li>
+<li>Test-and-set，写值到某个内存位置并传回其旧值。汇编指令BST</li>
+<li>Test and Test-and-set，用来低低Test-and-Set的资源争夺情况<br><strong>注</strong>：在实际的C/C++程序中，CAS的各种实现版本如下：</li>
+</ul>
+<a id="more"></a>
+<h2 id="GCC的CAS"><a href="#GCC的CAS" class="headerlink" title="GCC的CAS"></a>GCC的CAS</h2><p>GCC4.1+版本中支持CAS的原子操作（完整的原子操作可参看 <a href="http://gcc.gnu.org/onlinedocs/gcc-4.1.1/gcc/Atomic-Builtins.html" target="_blank" rel="external">GCC Atomic Builtins</a>）</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">bool</span> __sync_bool_compare_and_swap (type *ptr, type oldval type newval, ...)</div><div class="line">type __sync_val_compare_and_swap (type *ptr, type oldval type newval, ...)</div></pre></td></tr></table></figure>
+<h2 id="Windows的CAS"><a href="#Windows的CAS" class="headerlink" title="Windows的CAS"></a>Windows的CAS</h2><p>在Windows下，你可以使用下面的Windows API来完成CAS：（完整的Windows原子操作可参看MSDN的<a href="http://msdn.microsoft.com/en-us/library/windows/desktop/ms686360(v=vs.85" target="_blank" rel="external">InterLocked Functions</a>.aspx#interlocked_functions)）<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line">InterlockedCompareExchange ( __inout LONG <span class="keyword">volatile</span> *Target,</div><div class="line">                                __in LONG Exchange,</div><div class="line">                                __in LONG Comperand);</div></pre></td></tr></table></figure></p>
+<p>##C++11中的CAS<br>C++11中的STL中的atomic类的函数可以让你跨平台。（完整的C++11的原子操作可参看 <a href="http://en.cppreference.com/w/cpp/atomic" target="_blank" rel="external">Atomic Operation Library</a>）<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">template</span>&lt; <span class="keyword">class</span> T &gt;</div><div class="line"><span class="function"><span class="keyword">bool</span> <span class="title">atomic_compare_exchange_weak</span><span class="params">( <span class="built_in">std</span>::atomic* obj,</span></span></div><div class="line">                                   T* expected, T desired );</div><div class="line"><span class="keyword">template</span>&lt; <span class="keyword">class</span> T &gt;</div><div class="line"><span class="function"><span class="keyword">bool</span> <span class="title">atomic_compare_exchange_weak</span><span class="params">( <span class="keyword">volatile</span> <span class="built_in">std</span>::atomic* obj,</span></span></div><div class="line">                                   T* expected, T desired );</div></pre></td></tr></table></figure></p>
+<h1 id="无锁队列的链表实现"><a href="#无锁队列的链表实现" class="headerlink" title="无锁队列的链表实现"></a>无锁队列的链表实现</h1><p>下面的东西主要来自John D. Valois 1994年10月在拉斯维加斯的并行和分布系统系统国际大会上的一篇论文——《<a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.8674&amp;rep=rep1&amp;type=pdf" target="_blank" rel="external">Implementing Lock-Free Queues</a>》。</p>
+<p>我们先来看一下进队列用CAS实现的方式：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div></pre></td><td class="code"><pre><div class="line">EnQueue(x) <span class="comment">//进队列</span></div><div class="line">&#123;</div><div class="line">    <span class="comment">//准备新加入的结点数据</span></div><div class="line">    q = <span class="keyword">new</span> record();</div><div class="line">    q-&gt;value = x;</div><div class="line">    q-&gt;next = <span class="literal">NULL</span>;</div><div class="line"> </div><div class="line">    <span class="keyword">do</span> &#123;</div><div class="line">        p = tail; <span class="comment">//取链表尾指针的快照</span></div><div class="line">    &#125; <span class="keyword">while</span>( CAS(p-&gt;next, <span class="literal">NULL</span>, q) != TRUE); <span class="comment">//如果没有把结点链在尾指针上，再试</span></div><div class="line"> </div><div class="line">    CAS(tail, p, q); <span class="comment">//置尾结点</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>我们可以看到，程序中的那个 do- while 的 Re-Try-Loop。就是说，很有可能我在准备在队列尾加入结点时，别的线程已经加成功了，于是tail指针就变了，于是我的CAS返回了false，于是程序再试，直到试成功为止。这个很像我们的抢电话热线的不停重播的情况。</p>
+<p>你会看到，为什么我们的“置尾结点”的操作（第12行）不判断是否成功，因为：</p>
+<ol>
+<li>如果有一个线程T1，它的while中的CAS如果成功的话，那么其它所有的 随后线程的CAS都会失败，然后就会再循环，</li>
+<li>此时，如果T1 线程还没有更新tail指针，其它的线程继续失败，因为tail-&gt;next不是NULL了。</li>
+<li>直到T1线程更新完tail指针，于是其它的线程中的某个线程就可以得到新的tail指针，继续往下走了。</li>
+</ol>
+<p>这里有一个潜在的问题——如果T1线程在用CAS更新tail指针的之前，线程停掉或是挂掉了，那么其它线程就进入死循环了。下面是改良版的EnQueue()<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">EnQueue(x) <span class="comment">//进队列改良版</span></div><div class="line">&#123;</div><div class="line">    q = <span class="keyword">new</span> record();</div><div class="line">    q-&gt;value = x;</div><div class="line">    q-&gt;next = <span class="literal">NULL</span>;</div><div class="line"> </div><div class="line">    p = tail;</div><div class="line">    oldp = p</div><div class="line">    <span class="keyword">do</span> &#123;</div><div class="line">        <span class="keyword">while</span> (p-&gt;next != <span class="literal">NULL</span>)  <span class="comment">//&lt;----</span></div><div class="line">            p = p-&gt;next;         <span class="comment">//&lt;----</span></div><div class="line">    &#125; <span class="keyword">while</span>( CAS(p.next, <span class="literal">NULL</span>, q) != TRUE); <span class="comment">//如果没有把结点链在尾上，再试</span></div><div class="line"> </div><div class="line">    CAS(tail, oldp, q); <span class="comment">//置尾结点</span></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>我们让每个线程，自己fetch 指针 p 到链表尾。但是这样的fetch会很影响性能。而通实际情况看下来，99.9%的情况不会有线程停转的情况，所以，更好的做法是，你可以接合上述的这两个版本，如果retry的次数超了一个值的话（比如说3次），那么，就自己fetch指针。</p>
+<p>好了，我们解决了EnQueue，我们再来看看DeQueue的代码：（很简单，我就不解释了）<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">DeQueue() <span class="comment">//出队列</span></div><div class="line">&#123;</div><div class="line">    <span class="keyword">do</span>&#123;</div><div class="line">        p = head;</div><div class="line">        <span class="keyword">if</span> (p-&gt;next == <span class="literal">NULL</span>)&#123;</div><div class="line">            <span class="keyword">return</span> ERR_EMPTY_QUEUE;</div><div class="line">        &#125;</div><div class="line">    <span class="keyword">while</span>( CAS(head, p, p-&gt;next) != TRUE );</div><div class="line">    <span class="keyword">return</span> p-&gt;next-&gt;value;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p><strong>我们可以看到，DeQueue的代码操作的是 head-&gt;next，而不是head本身。这样考虑是因为一个边界条件，我们需要一个dummy的头指针来解决链表中如果只有一个元素，head和tail都指向同一个结点的问题，这样EnQueue和DeQueue要互相排斥了。</strong><br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81%E9%98%9F%E5%88%97%E7%9A%84%E5%AE%9E%E7%8E%B0/1.jpg" alt=""><br>注：上图的tail正处于更新之前的状态。</p>
+<h1 id="CAS的ABA问题"><a href="#CAS的ABA问题" class="headerlink" title="CAS的ABA问题"></a>CAS的ABA问题</h1><p>所谓ABA（见<a href="http://en.wikipedia.org/wiki/ABA_problem" target="_blank" rel="external">维基百科的ABA词条</a>），问题基本是这个样子：</p>
+<ol>
+<li>进程P1在共享变量中读到值为A</li>
+<li>P1被抢占了，进程P2执行</li>
+<li>P2把共享变量里的值从A改成了B，再改回到A，此时被P1抢占。</li>
+<li>P1回来看到共享变量里的值没有被改变，于是继续执行。</li>
+</ol>
+<p>虽然P1以为变量值没有改变，继续执行了，但是这个会引发一些潜在的问题。<strong>ABA问题最容易发生在lock free 的算法中的，CAS首当其冲，因为CAS判断的是指针的地址。如果这个地址被重用了呢，问题就很大了。</strong>（地址被重用是很经常发生的，一个内存分配后释放了，再分配，很有可能还是原来的地址）</p>
+<p>比如上述的DeQueue()函数，因为我们要让head和tail分开，所以我们引入了一个dummy指针给head，当我们做CAS的之前，如果head的那块内存被回收并被重用了，而重用的内存又被EnQueue()进来了，这会有很大的问题。（<strong>内存管理中重用内存基本上是一种很常见的行为</strong>）</p>
+<p>这个例子你可能没有看懂，维基百科上给了一个活生生的例子——</p>
+<blockquote>
+<p>你拿着一个装满钱的手提箱在飞机场，此时过来了一个火辣性感的美女，然后她很暖昧地挑逗着你，并趁你不注意的时候，把用一个一模一样的手提箱和你那装满钱的箱子调了个包，然后就离开了，你看到你的手提箱还在那，于是就提着手提箱去赶飞机去了。</p>
+</blockquote>
+<p>这就是ABA的问题。</p>
+<h1 id="解决ABA的问题"><a href="#解决ABA的问题" class="headerlink" title="解决ABA的问题"></a>解决ABA的问题</h1><p>维基百科上给了一个解——使用double-CAS（双保险的CAS），例如，在32位系统上，我们要检查64位的内容</p>
+<ol>
+<li>一次用CAS检查双倍长度的值，前半部是指针，后半部分是一个计数器。</li>
+<li>只有这两个都一样，才算通过检查，要吧赋新的值。并把计数器累加1。</li>
+</ol>
+<p>这样一来，ABA发生时，虽然值一样，但是计数器就不一样（但是在32位的系统上，这个计数器会溢出回来又从1开始的，这还是会有ABA的问题）</p>
+<p>当然，我们这个队列的问题就是不想让那个内存重用，这样明确的业务问题比较好解决，论文《<a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.8674&amp;rep=rep1&amp;type=pdf" target="_blank" rel="external">Implementing Lock-Free Queues</a>》给出一这么一个方法——<strong>使用结点内存引用计数refcnt</strong>！<br><figure class="highlight c"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div></pre></td><td class="code"><pre><div class="line">SafeRead(q)</div><div class="line">&#123;</div><div class="line">    loop:</div><div class="line">        p = q-&gt;next;</div><div class="line">        <span class="keyword">if</span> (p == <span class="literal">NULL</span>)&#123;</div><div class="line">            <span class="keyword">return</span> p;</div><div class="line">        &#125;</div><div class="line"> </div><div class="line">        <span class="function">Fetch&amp;<span class="title">Add</span><span class="params">(p-&gt;refcnt, <span class="number">1</span>)</span></span>;</div><div class="line"> </div><div class="line">        <span class="keyword">if</span> (p == q-&gt;next)&#123;</div><div class="line">            <span class="keyword">return</span> p;</div><div class="line">        &#125;<span class="keyword">else</span>&#123;</div><div class="line">            Release(p);</div><div class="line">        &#125;</div><div class="line">    <span class="keyword">goto</span> loop;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>其中的 Fetch&amp;Add和Release分是是加引用计数和减引用计数，都是原子操作，这样就可以阻止内存被回收了。</p>
+<h1 id="用数组实现无锁队列"><a href="#用数组实现无锁队列" class="headerlink" title="用数组实现无锁队列"></a>用数组实现无锁队列</h1><p>本实现来自论文《<a href="http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.53.8674&amp;rep=rep1&amp;type=pdf" target="_blank" rel="external">Implementing Lock-Free Queues</a>》</p>
+<p>使用数组来实现队列是很常见的方法，因为没有内存的分部和释放，一切都会变得简单，实现的思路如下：</p>
+<ol>
+<li>数组队列应该是一个ring buffer形式的数组（环形数组）</li>
+<li>数组的元素应该有三个可能的值：HEAD，TAIL，EMPTY（当然，还有实际的数据）</li>
+<li>数组一开始全部初始化成EMPTY，有两个相邻的元素要初始化成HEAD和TAIL，这代表空队列。</li>
+<li>EnQueue操作。假设数据x要入队列，定位TAIL的位置，使用double-CAS方法把(TAIL, EMPTY) 更新成 (x, TAIL)。需要注意，如果找不到(TAIL, EMPTY)，则说明队列满了。</li>
+<li>DeQueue操作。定位HEAD的位置，把(HEAD, x)更新成(EMPTY, HEAD)，并把x返回。同样需要注意，如果x是TAIL，则说明队列为空。</li>
+</ol>
+<p>算法的一个关键是——如何定位HEAD或TAIL？</p>
+<ol>
+<li>我们可以声明两个计数器，一个用来计数EnQueue的次数，一个用来计数DeQueue的次数。</li>
+<li>这两个计算器使用使用Fetch&amp;ADD来进行原子累加，在EnQueue或DeQueue完成的时候累加就好了。</li>
+<li>累加后求个模什么的就可以知道TAIL和HEAD的位置了。</li>
+</ol>
+<p>如下图所示：<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81%E9%98%9F%E5%88%97%E7%9A%84%E5%AE%9E%E7%8E%B0/2.jpg" alt=""><br><img src="http://op06ugvox.bkt.clouddn.com/hexo/无锁队列的实现/2.jpg" alt=""></p>
+<h1 id="小结"><a href="#小结" class="headerlink" title="小结"></a>小结</h1><p>以上基本上就是所有的无锁队列的技术细节，这些技术都可以用在其它的无锁数据结构上。</p>
+<ol>
+<li>无锁队列主要是通过CAS、FAA这些原子操作，和Retry-Loop实现。</li>
+<li>对于Retry-Loop，我个人感觉其实和锁什么什么两样。只是这种“锁”的粒度变小了，主要是“锁”HEAD和TAIL这两个关键资源。而不是整个数据结构。</li>
+</ol>
+<p>还有一些和Lock Free的文章你可以去看看：</p>
+<ul>
+<li>Code Project 上的雄文 《<a href="http://www.codeproject.com/Articles/153898/Yet-another-implementation-of-a-lock-free-circular" target="_blank" rel="external">Yet another implementation of a lock-free circular array queue</a>》</li>
+<li>Herb Sutter的《<a href="http://www.drdobbs.com/parallel/writing-lock-free-code-a-corrected-queue/210604448?pgno=1" target="_blank" rel="external">Writing Lock-Free Code: A Corrected Queue</a>》– 用C++11的std::atomic模板。</li>
+<li>IBM developerWorks的《<a href="http://www.ibm.com/developerworks/cn/aix/library/au-multithreaded_structures2/index.html" target="_blank" rel="external">设计不使用互斥锁的并发数据结构</a>》</li>
+<li>本文转载自：<a href="http://coolshell.cn/articles/8239.html" target="_blank" rel="external">酷 壳</a></li>
+</ul>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;关于无锁队列的实现，网上有很多文章，虽然本文可能和那些文章有所重复，但是我还是想以我自己的方式把这些文章中的重要的知识点串起来和大家讲一讲这个技术。下面开始正文。&lt;/p&gt;
+&lt;h1 id=&quot;关于CAS等原子操作&quot;&gt;&lt;a href=&quot;#关于CAS等原子操作&quot; class=&quot;headerlink&quot; title=&quot;关于CAS等原子操作&quot;&gt;&lt;/a&gt;关于CAS等原子操作&lt;/h1&gt;&lt;p&gt;在开始说无锁队列之前，我们需要知道一个很重要的技术就是CAS操作——Compare &amp;amp; Set，或是 Compare &amp;amp; Swap，&lt;strong&gt;现在几乎所有的CPU指令都支持CAS的原子操作&lt;/strong&gt;，X86下对应的是 &lt;strong&gt;CMPXCHG&lt;/strong&gt;汇编指令。有了这个原子操作，我们就可以用其来实现各种无锁（lock free）的数据结构。&lt;br&gt;这个操作用C语言来描述就是下面这个样子：（代码来自&lt;a href=&quot;http://en.wikipedia.org/wiki/Compare-and-swap&quot;&gt;Wikipedia的Compare And Swap&lt;/a&gt;词条）意思就是说，看一看内存*reg里的值是不是oldval，如果是的话，则对其赋值newval。&lt;br&gt;&lt;figure class=&quot;highlight c&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;1&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;2&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;3&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;4&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;5&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;6&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;7&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;compare_and_swap&lt;/span&gt; &lt;span class=&quot;params&quot;&gt;(&lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt;* reg, &lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt; oldval, &lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt; newval)&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;/span&gt;&amp;#123;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;  &lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt; old_reg_val = *reg;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;  &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; (old_reg_val == oldval)&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;     *reg = newval;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;  &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; old_reg_val;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&amp;#125;&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;这个操作可以变种为返回bool值的形式（返回 bool值的好处在于，可以调用者知道有没有更新成功）：&lt;br&gt;&lt;figure class=&quot;highlight c&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;1&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;2&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;3&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;4&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;5&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;6&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;7&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;8&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;function&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;bool&lt;/span&gt; &lt;span class=&quot;title&quot;&gt;compare_and_swap&lt;/span&gt; &lt;span class=&quot;params&quot;&gt;(&lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt; *accum, &lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt; *dest, &lt;span class=&quot;keyword&quot;&gt;int&lt;/span&gt; newval)&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;/span&gt;&amp;#123;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;  &lt;span class=&quot;keyword&quot;&gt;if&lt;/span&gt; ( *accum == *dest ) &amp;#123;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;      *dest = newval;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;      &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;literal&quot;&gt;true&lt;/span&gt;;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;  &amp;#125;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;  &lt;span class=&quot;keyword&quot;&gt;return&lt;/span&gt; &lt;span class=&quot;literal&quot;&gt;false&lt;/span&gt;;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&amp;#125;&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
+&lt;p&gt;与CAS相似的还有下面的原子操作：（这些东西大家自己看Wikipedia吧）&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Fetch And Add，一般用来对变量做 +1 的原子操作&lt;/li&gt;
+&lt;li&gt;Test-and-set，写值到某个内存位置并传回其旧值。汇编指令BST&lt;/li&gt;
+&lt;li&gt;Test and Test-and-set，用来低低Test-and-Set的资源争夺情况&lt;br&gt;&lt;strong&gt;注&lt;/strong&gt;：在实际的C/C++程序中，CAS的各种实现版本如下：&lt;/li&gt;
+&lt;/ul&gt;
+    
+    </summary>
+    
+      <category term="java" scheme="http://www.javacn.top/categories/java/"/>
+    
+    
+      <category term="java" scheme="http://www.javacn.top/tags/java/"/>
+    
+      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
+    
+      <category term="并发" scheme="http://www.javacn.top/tags/%E5%B9%B6%E5%8F%91/"/>
+    
+      <category term="数据结构与算法" scheme="http://www.javacn.top/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="lock-free" scheme="http://www.javacn.top/tags/lock-free/"/>
+    
+      <category term="queue" scheme="http://www.javacn.top/tags/queue/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>JAVA HASHMAP的死循环</title>
+    <link href="http://www.javacn.top/20170505/java-hashmap-infinite-loop/"/>
+    <id>http://www.javacn.top/20170505/java-hashmap-infinite-loop/</id>
+    <published>2017-05-05T06:58:17.000Z</published>
+    <updated>2017-05-05T07:22:33.961Z</updated>
+    
+    <content type="html"><![CDATA[<p>在淘宝内网里看到同事发了贴说了一个CPU被100%的线上故障，并且这个事发生了很多次，原因是在Java语言在并发情况下使用HashMap造成Race Condition，从而导致死循环。这个事情我4、5年前也经历过，本来觉得没什么好写的，因为Java的HashMap是非线程安全的，所以在并发下必然出现问题。但是，我发现近几年，很多人都经历过这个事（在网上查“HashMap Infinite Loop”可以看到很多人都在说这个事）所以，觉得这个是个普遍问题，需要写篇疫苗文章说一下这个事，并且给大家看看一个完美的“Race Condition”是怎么形成的。</p>
+<h1 id="问题的症状"><a href="#问题的症状" class="headerlink" title="问题的症状"></a>问题的症状</h1><p>从前我们的Java代码因为一些原因使用了HashMap这个东西，但是当时的程序是单线程的，一切都没有问题。后来，我们的程序性能有问题，所以需要变成多线程的，于是，变成多线程后到了线上，发现程序经常占了100%的CPU，查看堆栈，你会发现程序都Hang在了HashMap.get()这个方法上了，重启程序后问题消失。但是过段时间又会来。而且，这个问题在测试环境里可能很难重现。</p>
+<p>我们简单的看一下我们自己的代码，我们就知道HashMap被多个线程操作。而Java的文档说HashMap是非线程安全的，应该用ConcurrentHashMap。</p>
+<p>但是在这里我们可以来研究一下原因。</p>
+<a id="more"></a>
+<h1 id="Hash表数据结构"><a href="#Hash表数据结构" class="headerlink" title="Hash表数据结构"></a>Hash表数据结构</h1><p>我需要简单地说一下HashMap这个经典的数据结构。</p>
+<p>HashMap通常会用一个指针数组（假设为table[]）来做分散所有的key，当一个key被加入时，会通过Hash算法通过key算出这个数组的下标i，然后就把这个<key, value="">插到table[i]中，如果有两个不同的key被算在了同一个i，那么就叫冲突，又叫碰撞，这样会在table[i]上形成一个链表。</key,></p>
+<p>我们知道，如果table[]的尺寸很小，比如只有2个，如果要放进10个keys的话，那么碰撞非常频繁，于是一个O(1)的查找算法，就变成了链表遍历，性能变成了O(n)，这是Hash表的缺陷（可参看《<a href="http://coolshell.cn/articles/6424.html" target="_blank" rel="external">Hash Collision DoS 问题</a>》）。</p>
+<p>所以，Hash表的尺寸和容量非常的重要。一般来说，Hash表这个容器当有数据要插入时，都会检查容量有没有超过设定的thredhold，如果超过，需要增大Hash表的尺寸，但是这样一来，整个Hash表里的无素都需要被重算一遍。这叫rehash，这个成本相当的大。</p>
+<p>相信大家对这个基础知识已经很熟悉了。</p>
+<h1 id="HashMap的rehash源代码"><a href="#HashMap的rehash源代码" class="headerlink" title="HashMap的rehash源代码"></a>HashMap的rehash源代码</h1><p>下面，我们来看一下Java的HashMap的源代码。</p>
+<p>Put一个Key,Value对到Hash表中：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">public</span> V <span class="title">put</span><span class="params">(K key, V value)</span></span></div><div class="line">&#123;</div><div class="line">    ......</div><div class="line">    <span class="comment">//算Hash值</span></div><div class="line">    <span class="keyword">int</span> hash = hash(key.hashCode());</div><div class="line">    <span class="keyword">int</span> i = indexFor(hash, table.length);</div><div class="line">    <span class="comment">//如果该key已被插入，则替换掉旧的value （链接操作）</span></div><div class="line">    <span class="keyword">for</span> (Entry&lt;K,V&gt; e = table[i]; e != <span class="keyword">null</span>; e = e.next) &#123;</div><div class="line">        Object k;</div><div class="line">        <span class="keyword">if</span> (e.hash == hash &amp;&amp; ((k = e.key) == key || key.equals(k))) &#123;</div><div class="line">            V oldValue = e.value;</div><div class="line">            e.value = value;</div><div class="line">            e.recordAccess(<span class="keyword">this</span>);</div><div class="line">            <span class="keyword">return</span> oldValue;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    modCount++;</div><div class="line">    <span class="comment">//该key不存在，需要增加一个结点</span></div><div class="line">    addEntry(hash, key, value, i);<span class="comment">//&lt;-----</span></div><div class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>检查容量是否超标<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">addEntry</span><span class="params">(<span class="keyword">int</span> hash, K key, V value, <span class="keyword">int</span> bucketIndex)</span></span></div><div class="line">&#123;</div><div class="line">    Entry&lt;K,V&gt; e = table[bucketIndex];</div><div class="line">    table[bucketIndex] = <span class="keyword">new</span> Entry&lt;K,V&gt;(hash, key, value, e);</div><div class="line">    <span class="comment">//查看当前的size是否超过了我们设定的阈值threshold，如果超过，需要resize</span></div><div class="line">    <span class="keyword">if</span> (size++ &gt;= threshold)</div><div class="line">        resize(<span class="number">2</span> * table.length);<span class="comment">//&lt;------</span></div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>新建一个更大尺寸的hash表，然后把数据从老的Hash表中迁移到新的Hash表中。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">resize</span><span class="params">(<span class="keyword">int</span> newCapacity)</span></span></div><div class="line">&#123;</div><div class="line">    Entry[] oldTable = table;</div><div class="line">    <span class="keyword">int</span> oldCapacity = oldTable.length;</div><div class="line">    ......</div><div class="line">    <span class="comment">//创建一个新的Hash Table</span></div><div class="line">    Entry[] newTable = <span class="keyword">new</span> Entry[newCapacity];</div><div class="line">    <span class="comment">//将Old Hash Table上的数据迁移到New Hash Table上</span></div><div class="line">    transfer(newTable);<span class="comment">//&lt;-------</span></div><div class="line">    table = newTable;</div><div class="line">    threshold = (<span class="keyword">int</span>)(newCapacity * loadFactor);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>迁移的源代码，注意<code>&lt;------</code>处：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">void</span> <span class="title">transfer</span><span class="params">(Entry[] newTable)</span></span></div><div class="line">&#123;</div><div class="line">    Entry[] src = table;</div><div class="line">    <span class="keyword">int</span> newCapacity = newTable.length;</div><div class="line">    <span class="comment">//下面这段代码的意思是：</span></div><div class="line">    <span class="comment">//  从OldTable里摘一个元素出来，然后放到NewTable中</span></div><div class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> j = <span class="number">0</span>; j &lt; src.length; j++) &#123;</div><div class="line">        Entry&lt;K,V&gt; e = src[j];</div><div class="line">        <span class="keyword">if</span> (e != <span class="keyword">null</span>) &#123;</div><div class="line">            src[j] = <span class="keyword">null</span>;</div><div class="line">            <span class="keyword">do</span> &#123;</div><div class="line">                Entry&lt;K,V&gt; next = e.next;<span class="comment">//&lt;------</span></div><div class="line">                <span class="keyword">int</span> i = indexFor(e.hash, newCapacity);</div><div class="line">                e.next = newTable[i];<span class="comment">//&lt;------</span></div><div class="line">                newTable[i] = e;<span class="comment">//&lt;------</span></div><div class="line">                e = next;<span class="comment">//&lt;------</span></div><div class="line">            &#125; <span class="keyword">while</span> (e != <span class="keyword">null</span>);</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>好了，这个代码算是比较正常的。而且没有什么问题。</p>
+<h1 id="正常的ReHash的过程"><a href="#正常的ReHash的过程" class="headerlink" title="正常的ReHash的过程"></a>正常的ReHash的过程</h1><p>画了个图做了个演示。</p>
+<ul>
+<li>我假设了我们的hash算法就是简单的用key mod 一下表的大小（也就是数组的长度）。</li>
+<li>最上面的是old hash 表，其中的Hash表的size=2, 所以key = 3, 7, 5，在mod 2以后都冲突在table[1]这里了。</li>
+<li>接下来的三个步骤是Hash表 resize成4，然后所有的<key,value> 重新rehash的过程<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/JAVA-HASHMAP%E7%9A%84%E6%AD%BB%E5%BE%AA%E7%8E%AF/1.jpg" alt=""></key,value></li>
+</ul>
+<h1 id="并发下的Rehash"><a href="#并发下的Rehash" class="headerlink" title="并发下的Rehash"></a>并发下的Rehash</h1><ol>
+<li><strong>假设我们有两个线程。</strong>我用红色和浅蓝色标注了一下。<br>我们再回头看一下我们的 transfer代码中的这个细节：<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">do</span> &#123;</div><div class="line">    Entry&lt;K,V&gt; next = e.next; <span class="comment">// &lt;-----假设线程一执行到这里就被调度挂起了</span></div><div class="line">    <span class="keyword">int</span> i = indexFor(e.hash, newCapacity);</div><div class="line">    e.next = newTable[i];</div><div class="line">    newTable[i] = e;</div><div class="line">    e = next;</div><div class="line">&#125; <span class="keyword">while</span> (e != <span class="keyword">null</span>);</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>而我们的线程二执行完成了。于是我们有下面的这个样子。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/JAVA-HASHMAP%E7%9A%84%E6%AD%BB%E5%BE%AA%E7%8E%AF/2.jpg" alt=""><br>注意，<strong>因为Thread1的 e 指向了key(3)，而next指向了key(7)，其在线程二rehash后，指向了线程二重组后的链表</strong>。我们可以看到链表的顺序被反转后。</p>
+<ol>
+<li><strong>线程一被调度回来执行</strong>。<ul>
+<li>先是执行 newTalbe[i] = e;</li>
+<li>然后是e = next，导致了e指向了key(7)，</li>
+<li>而下一次循环的next = e.next导致了next指向了key(3)<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/JAVA-HASHMAP%E7%9A%84%E6%AD%BB%E5%BE%AA%E7%8E%AF/3.jpg" alt=""></li>
+</ul>
+</li>
+<li><strong>一切安好</strong>。<br>线程一接着工作。<strong>把key(7)摘下来，放到newTable[i]的第一个，然后把e和next往下移。</strong><br><img src="http://op06ugvox.bkt.clouddn.com/hexo/JAVA-HASHMAP%E7%9A%84%E6%AD%BB%E5%BE%AA%E7%8E%AF/4.jpg" alt=""></li>
+<li><strong>环形链接出现。</strong><br><strong>e.next = newTable[i] 导致  key(3).next 指向了 key(7)</strong><br><strong>注意：此时的key(7).next 已经指向了key(3)， 环形链表就这样出现了。</strong><br><img src="http://op06ugvox.bkt.clouddn.com/hexo/JAVA-HASHMAP%E7%9A%84%E6%AD%BB%E5%BE%AA%E7%8E%AF/5.jpg" alt=""><br><strong>于是，当我们的线程一调用到，HashTable.get(11)时，悲剧就出现了——Infinite Loop。</strong></li>
+</ol>
+<h1 id="其它"><a href="#其它" class="headerlink" title="其它"></a>其它</h1><p>有人把这个问题报给了Sun，不过Sun不认为这个是一个问题。因为HashMap本来就不支持并发。要并发就用ConcurrentHashmap</p>
+<p><a href="http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6423457" target="_blank" rel="external">http://bugs.sun.com/bugdatabase/view_bug.do?bug_id=6423457</a></p>
+<p>我在这里把这个事情记录下来，只是为了让大家了解并体会一下并发环境下的危险。</p>
+<p>参考：<a href="http://mailinator.blogspot.com/2009/06/beautiful-race-condition.html" target="_blank" rel="external">http://mailinator.blogspot.com/2009/06/beautiful-race-condition.html</a></p>
+<p>本文转载自：<a href="http://coolshell.cn/articles/9606.html" target="_blank" rel="external">酷 壳</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;在淘宝内网里看到同事发了贴说了一个CPU被100%的线上故障，并且这个事发生了很多次，原因是在Java语言在并发情况下使用HashMap造成Race Condition，从而导致死循环。这个事情我4、5年前也经历过，本来觉得没什么好写的，因为Java的HashMap是非线程安全的，所以在并发下必然出现问题。但是，我发现近几年，很多人都经历过这个事（在网上查“HashMap Infinite Loop”可以看到很多人都在说这个事）所以，觉得这个是个普遍问题，需要写篇疫苗文章说一下这个事，并且给大家看看一个完美的“Race Condition”是怎么形成的。&lt;/p&gt;
+&lt;h1 id=&quot;问题的症状&quot;&gt;&lt;a href=&quot;#问题的症状&quot; class=&quot;headerlink&quot; title=&quot;问题的症状&quot;&gt;&lt;/a&gt;问题的症状&lt;/h1&gt;&lt;p&gt;从前我们的Java代码因为一些原因使用了HashMap这个东西，但是当时的程序是单线程的，一切都没有问题。后来，我们的程序性能有问题，所以需要变成多线程的，于是，变成多线程后到了线上，发现程序经常占了100%的CPU，查看堆栈，你会发现程序都Hang在了HashMap.get()这个方法上了，重启程序后问题消失。但是过段时间又会来。而且，这个问题在测试环境里可能很难重现。&lt;/p&gt;
+&lt;p&gt;我们简单的看一下我们自己的代码，我们就知道HashMap被多个线程操作。而Java的文档说HashMap是非线程安全的，应该用ConcurrentHashMap。&lt;/p&gt;
+&lt;p&gt;但是在这里我们可以来研究一下原因。&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="java" scheme="http://www.javacn.top/categories/java/"/>
+    
+    
+      <category term="java" scheme="http://www.javacn.top/tags/java/"/>
+    
+      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
+    
+      <category term="hashmap" scheme="http://www.javacn.top/tags/hashmap/"/>
+    
+      <category term="死循环" scheme="http://www.javacn.top/tags/%E6%AD%BB%E5%BE%AA%E7%8E%AF/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>无锁HASHMAP的原理与实现</title>
+    <link href="http://www.javacn.top/20170505/Lock-Free_Hash_Tables/"/>
+    <id>http://www.javacn.top/20170505/Lock-Free_Hash_Tables/</id>
+    <published>2017-05-05T06:56:32.000Z</published>
+    <updated>2017-05-05T08:08:22.787Z</updated>
+    
+    <content type="html"><![CDATA[<p>在《<a href="../java-hashmap-infinite-loop">疫苗：Java HashMap的死循环</a>》中，我们看到，java.util.HashMap并不能直接应用于多线程环境。对于多线程环境中应用HashMap，主要有以下几种选择：</p>
+<ol>
+<li>使用线程安全的java.util.Hashtable作为替代。</li>
+<li>使用java.util.Collections.synchronizedMap方法，将已有的HashMap对象包装为线程安全的。</li>
+<li>使用java.util.concurrent.ConcurrentHashMap类作为替代，它具有非常好的性能。</li>
+</ol>
+<p>而以上几种方法在实现的具体细节上，都或多或少地用到了互斥锁。互斥锁会造成线程阻塞，降低运行效率，并有可能产生死锁、优先级翻转等一系列问题。</p>
+<p>CAS(Compare And Swap)是一种底层硬件提供的功能，它可以将判断并更改一个值的操作原子化。关于CAS的一些应用，《<a href="../lock-free_queue">无锁队列的实现</a>》一文中有很详细的介绍。</p>
+<h1 id="Java中的原子操作"><a href="#Java中的原子操作" class="headerlink" title="Java中的原子操作"></a>Java中的原子操作</h1><p>在java.util.concurrent.atomic包中，Java为我们提供了很多方便的原子类型，它们底层完全基于CAS操作。</p>
+<p>例如我们希望实现一个全局公用的计数器，那么可以：</p>
+<a id="more"></a>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">private</span> AtomicInteger counter = <span class="keyword">new</span> AtomicInteger(<span class="number">3</span>);</div><div class="line"> </div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">addCounter</span><span class="params">()</span> </span>&#123;</div><div class="line">    <span class="keyword">for</span> (;;) &#123;</div><div class="line">        <span class="keyword">int</span> oldValue = counter.get();</div><div class="line">        <span class="keyword">int</span> newValue = oldValue + <span class="number">1</span>;</div><div class="line">        <span class="keyword">if</span> (counter.compareAndSet(oldValue, newValue))</div><div class="line">            <span class="keyword">return</span>;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>其中，compareAndSet方法会检查counter现有的值是否为oldValue，如果是，则将其设置为新值newValue，操作成功并返回true；否则操作失败并返回false。</p>
+<p>当计算counter新值时，若其他线程将counter的值改变，compareAndSwap就会失败。此时我们只需在外面加一层循环，不断尝试这个过程，那么最终一定会成功将counter值+1。（其实AtomicInteger已经为常用的+1/-1操作定义了incrementAndGet与decrementAndGet方法，以后我们只需简单调用它即可）</p>
+<p>除了AtomicInteger外，java.util.concurrent.atomic包还提供了AtomicReference和AtomicReferenceArray类型，它们分别代表原子性的引用和原子性的引用数组（引用的数组）。</p>
+<h1 id="无锁链表的实现"><a href="#无锁链表的实现" class="headerlink" title="无锁链表的实现"></a>无锁链表的实现</h1><p>在实现无锁HashMap之前，让我们先来看一下比较简单的无锁链表的实现方法。</p>
+<p>以插入操作为例：</p>
+<ol>
+<li>首先我们需要找到待插入位置前面的节点A和后面的节点B。</li>
+<li>然后新建一个节点C，并使其next指针指向节点B。（见图1）</li>
+<li>最后使节点A的next指针指向节点C。（见图2）<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/1-3.jpg" alt=""><br>但在操作中途，有可能其他线程在A与B直接也插入了一些节点（假设为D），如果我们不做任何判断，可能造成其他线程插入节点的丢失。（见图3）我们可以利用CAS操作，在为节点A的next指针赋值时，判断其是否仍然指向B，如果节点A的next指针发生了变化则重试整个插入操作。大致代码如下：<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">listInsert</span><span class="params">(Node head, Node c)</span> </span>&#123;</div><div class="line">    <span class="keyword">for</span> (;;) &#123;</div><div class="line">        Node a = findInsertionPlace(head), b = a.next.get();</div><div class="line">        c.next.set(b);</div><div class="line">        <span class="keyword">if</span> (a.next.compareAndSwap(b,c))</div><div class="line">            <span class="keyword">return</span>;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+</li>
+</ol>
+<p>(Node类的next字段为AtomicReference<node>类型，即指向Node类型的原子性引用)</node></p>
+<p>无锁链表的查找操作与普通链表没有区别。而其删除操作，则需要找到待删除节点前方的节点A和后方的节点B，利用CAS操作验证并更新节点A的next指针，使其指向节点B。</p>
+<h1 id="无锁HashMap的难点与突破"><a href="#无锁HashMap的难点与突破" class="headerlink" title="无锁HashMap的难点与突破"></a>无锁HashMap的难点与突破</h1><p>HashMap主要有<strong>插入</strong>、<strong>删除</strong>、<strong>查找</strong>以及<strong>ReHash</strong>四种基本操作。一个典型的HashMap实现，会用到一个数组，数组的每项元素为一个节点的链表。对于此链表，我们可以利用上文提到的操作方法，执行插入、删除以及查找操作，但对于ReHash操作则比较困难。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/4.jpg" alt=""><br>如图4，在ReHash过程中，一个典型的操作是遍历旧表中的每个节点，计算其在新表中的位置，然后将其移动至新表中。期间我们需要操纵3次指针：</p>
+<ol>
+<li>将A的next指针指向D</li>
+<li>将B的next指针指向C</li>
+<li>将C的next指针指向E</li>
+</ol>
+<p>而这三次指针操作必须同时完成，才能保证移动操作的原子性。但我们不难看出，CAS操作每次只能保证一个变量的值被原子性地验证并更新，无法满足同时验证并更新三个指针的需求。</p>
+<p>于是我们不妨换一个思路，既然移动节点的操作如此困难，我们可以使所有节点始终保持有序状态，从而避免了移动操作。在典型的HashMap实现中，数组的长度始终保持为$2^i$，而从Hash值映射为数组下标的过程，只是简单地对数组长度执行取模运算（即仅保留Hash二进制的后i位）。当ReHash时，数组长度加倍变为$2^{i+1}$，旧数组第j项链表中的每个节点，要么移动到新数组中第j项，要么移动到新数组中第$j+2^i$项，而它们的唯一区别在于Hash值第i+1位的不同（第i+1位为0则仍为第j项，否则为第$j+2^i$项）。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/5-6.jpg" alt=""><br>如图5，我们将所有节点按照Hash值的翻转位序（如1101-&gt;1011）由小到大排列。当数组大小为8时，2、18在一个组内；3、11、27在另一个组内。每组的开始，插入一个哨兵节点，以方便后续操作。为了使哨兵节点正确排在组的最前方，我们将正常节点Hash的最高位（翻转后变为最低位）置为1，而哨兵节点不设置这一位。</p>
+<p>当数组扩容至16时（见图6），第二组分裂为一个只含3的组和一个含有11、27的组，但节点之间的相对顺序并未改变。这样在ReHash时，我们就不需要移动节点了。</p>
+<h1 id="实现细节"><a href="#实现细节" class="headerlink" title="实现细节"></a>实现细节</h1><p>由于扩容时数组的复制会占用大量的时间，这里我们采用了将整个数组分块，懒惰建立的方法。这样，当访问到某下标时，仅需判断此下标所在块是否已建立完毕（如果没有则建立）。</p>
+<p>另外定义size为当前已使用的下标范围，其初始值为2，数组扩容时仅需将size加倍即可；定义count代表目前HashMap中包含的总节点个数（不算哨兵节点）。</p>
+<p>初始时，数组中除第0项外，所有项都为null。第0项指向一个仅有一个哨兵节点的链表，代表整条链的起点。初始时全貌见图7，其中浅绿色代表当前未使用的下标范围，虚线箭头代表逻辑上存在，但实际未建立的块。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/%E6%97%A0%E9%94%81HASHMAP%E7%9A%84%E5%8E%9F%E7%90%86%E4%B8%8E%E5%AE%9E%E7%8E%B0/7.jpg" alt=""></p>
+<h2 id="初始化下标操作"><a href="#初始化下标操作" class="headerlink" title="初始化下标操作"></a>初始化下标操作</h2><p>数组中为null的项都认为处于未初始化状态，初始化某个下标即代表建立其对应的哨兵节点。初始化是递归进行的，即若其父下标未初始化，则先初始化其父下标。（一个下标的父下标是其移除最高二进制位后得到的下标）大致代码如下：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initializeBucket</span><span class="params">(<span class="keyword">int</span> bucketIdx)</span> </span>&#123;</div><div class="line">    <span class="keyword">int</span> parentIdx = bucketIdx ^ Integer.highestOneBit(bucketIdx);</div><div class="line">    <span class="keyword">if</span> (getBucket(parentIdx) == <span class="keyword">null</span>)</div><div class="line">        initializeBucket(parentIdx);</div><div class="line"> </div><div class="line">    Node dummy = <span class="keyword">new</span> Node();</div><div class="line">    dummy.hash = Integer.reverse(bucketIdx);</div><div class="line">    dummy.next = <span class="keyword">new</span> AtomicReference&amp;lt;&amp;gt;();</div><div class="line"> </div><div class="line">    setBucket(bucketIdx, listInsert(getBucket(parentIdx), dummy));</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p>其中getBucket即封装过的获取数组某下标内容的方法，setBucket同理。listInsert将从指定位置开始查找适合插入的位置插入给定的节点，若链表中已存在hash相同的节点则返回那个已存在的节点；否则返回新插入的节点。</p>
+<h2 id="插入操作"><a href="#插入操作" class="headerlink" title="插入操作"></a>插入操作</h2><ul>
+<li>首先用HashMap的size对键的hashCode取模，得到应插入的数组下标。</li>
+<li>然后判断该下标处是否为null，如果为null则初始化此下标。</li>
+<li>构造一个新的节点，并插入到适当位置，注意节点中的hash值应为原hashCode经过位翻转并将最低位置1之后的值。</li>
+<li>将节点个数计数器加1，若加1后节点过多，则仅需将size改为size*2，代表对数组扩容（ReHash）。</li>
+</ul>
+<h2 id="查找操作"><a href="#查找操作" class="headerlink" title="查找操作"></a>查找操作</h2><ul>
+<li>找出待查找节点在数组中的下标。</li>
+<li>判断该下标处是否为null，如果为null则返回查找失败。</li>
+<li>从相应位置进入链表，顺次寻找，直至找出待查找节点或超出本组节点范围。</li>
+</ul>
+<h2 id="删除操作"><a href="#删除操作" class="headerlink" title="删除操作"></a>删除操作</h2><ul>
+<li>找出应删除节点在数组中的下标。</li>
+<li>判断该下标处是否为null，如果为null则初始化此下标。</li>
+<li>找到待删除节点，并从链表中删除。（注意由于哨兵节点的存在，任何正常元素只被其唯一的前驱节点所引用，不存在被前驱节点与数组中指针同时引用的情况，从而不会出现需要同时修改多个指针的情况）</li>
+<li>将节点个数计数器减1。</li>
+</ul>
+<h1 id="参考文献"><a href="#参考文献" class="headerlink" title="参考文献"></a>参考文献</h1><p>《<a href="http://www.cs.ucf.edu/~dcm/Teaching/COT4810-Spring2011/Literature/SplitOrderedLists.pdf" target="_blank" rel="external">Split-Ordered Lists: Lock-Free Extensible Hash Tables</a>》</p>
+<p>本文转载自：<a href="http://coolshell.cn/articles/9703.html" target="_blank" rel="external">酷 壳</a></p>
+]]></content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;在《&lt;a href=&quot;../java-hashmap-infinite-loop&quot;&gt;疫苗：Java HashMap的死循环&lt;/a&gt;》中，我们看到，java.util.HashMap并不能直接应用于多线程环境。对于多线程环境中应用HashMap，主要有以下几种选择：&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;使用线程安全的java.util.Hashtable作为替代。&lt;/li&gt;
+&lt;li&gt;使用java.util.Collections.synchronizedMap方法，将已有的HashMap对象包装为线程安全的。&lt;/li&gt;
+&lt;li&gt;使用java.util.concurrent.ConcurrentHashMap类作为替代，它具有非常好的性能。&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;而以上几种方法在实现的具体细节上，都或多或少地用到了互斥锁。互斥锁会造成线程阻塞，降低运行效率，并有可能产生死锁、优先级翻转等一系列问题。&lt;/p&gt;
+&lt;p&gt;CAS(Compare And Swap)是一种底层硬件提供的功能，它可以将判断并更改一个值的操作原子化。关于CAS的一些应用，《&lt;a href=&quot;../lock-free_queue&quot;&gt;无锁队列的实现&lt;/a&gt;》一文中有很详细的介绍。&lt;/p&gt;
+&lt;h1 id=&quot;Java中的原子操作&quot;&gt;&lt;a href=&quot;#Java中的原子操作&quot; class=&quot;headerlink&quot; title=&quot;Java中的原子操作&quot;&gt;&lt;/a&gt;Java中的原子操作&lt;/h1&gt;&lt;p&gt;在java.util.concurrent.atomic包中，Java为我们提供了很多方便的原子类型，它们底层完全基于CAS操作。&lt;/p&gt;
+&lt;p&gt;例如我们希望实现一个全局公用的计数器，那么可以：&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="java" scheme="http://www.javacn.top/categories/java/"/>
+    
+    
+      <category term="java" scheme="http://www.javacn.top/tags/java/"/>
+    
+      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
+    
+      <category term="hashmap" scheme="http://www.javacn.top/tags/hashmap/"/>
+    
+      <category term="并发" scheme="http://www.javacn.top/tags/%E5%B9%B6%E5%8F%91/"/>
+    
+      <category term="数据结构与算法" scheme="http://www.javacn.top/tags/%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%E4%B8%8E%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="lock-free" scheme="http://www.javacn.top/tags/lock-free/"/>
+    
+  </entry>
+  
+  <entry>
     <title>分布式系统的事务处理</title>
     <link href="http://www.javacn.top/20170505/transaction_distributed_system/"/>
     <id>http://www.javacn.top/20170505/transaction_distributed_system/</id>
     <published>2017-05-05T03:46:44.000Z</published>
-    <updated>2017-05-05T06:54:44.184Z</updated>
+    <updated>2017-05-05T08:08:48.283Z</updated>
     
     <content type="html"><![CDATA[<h1 id="分布式事务及应用场景"><a href="#分布式事务及应用场景" class="headerlink" title="分布式事务及应用场景"></a>分布式事务及应用场景</h1><p>当我们在生产线上用一台服务器来提供数据服务的时候，我会遇到如下的两个问题：</p>
 <ol>
@@ -32,7 +324,6 @@
 <li><strong>数据分区</strong>：就是把数据分块放在不同的服务器上（如：uid % 16，一致性哈希等）。</li>
 <li><strong>数据镜像</strong>：让所有的服务器都有相同的数据，提供相当的服务。</li>
 </ol>
-<p>$y^i$</p>
 <a id="more"></a>
 <p>对于第一种情况，我们无法解决数据丢失的问题，单台服务器出问题时，会有部分数据丢失。所以，<strong>数据服务的高可用性只能通过第二种方法来完成——数据的冗余存储</strong>（一般工业界认为比较安全的备份数应该是3份，如：Hadoop和Dynamo）。 但是，<strong>加入更多的机器，会让我们的数据服务变得很复杂，尤其是跨服务器的事务处理，也就是跨服务器的数据一致性。</strong>这个是一个很难的问题。 让我们用最经典的Use Case：“<strong><em>A帐号向B帐号汇钱</em></strong>”来说明一下，熟悉RDBMS事务的都知道从帐号A到帐号B需要6个操作：</p>
 <ol>
@@ -187,7 +478,6 @@
 &lt;li&gt;&lt;strong&gt;数据分区&lt;/strong&gt;：就是把数据分块放在不同的服务器上（如：uid % 16，一致性哈希等）。&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;数据镜像&lt;/strong&gt;：让所有的服务器都有相同的数据，提供相当的服务。&lt;/li&gt;
 &lt;/ol&gt;
-&lt;p&gt;$y^i$&lt;/p&gt;
     
     </summary>
     
@@ -338,11 +628,11 @@
       <category term="java" scheme="http://www.javacn.top/categories/java/"/>
     
     
-      <category term="java" scheme="http://www.javacn.top/tags/java/"/>
-    
       <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
     
       <category term="排序" scheme="http://www.javacn.top/tags/%E6%8E%92%E5%BA%8F/"/>
+    
+      <category term="java" scheme="http://www.javacn.top/tags/java/"/>
     
   </entry>
   
@@ -722,9 +1012,9 @@
       <category term="分布式" scheme="http://www.javacn.top/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
     
-      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
-    
       <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
     
       <category term="MVCC" scheme="http://www.javacn.top/tags/MVCC/"/>
     
@@ -870,9 +1160,9 @@
       <category term="分布式" scheme="http://www.javacn.top/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
     
-      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
-    
       <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
     
       <category term="分布式" scheme="http://www.javacn.top/tags/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
@@ -1029,9 +1319,9 @@
       <category term="分布式" scheme="http://www.javacn.top/categories/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
     
-      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
-    
       <category term="算法" scheme="http://www.javacn.top/tags/%E7%AE%97%E6%B3%95/"/>
+    
+      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
     
       <category term="分布式" scheme="http://www.javacn.top/tags/%E5%88%86%E5%B8%83%E5%BC%8F/"/>
     
@@ -2208,354 +2498,6 @@
       <category term="docker" scheme="http://www.javacn.top/tags/docker/"/>
     
       <category term="安装" scheme="http://www.javacn.top/tags/%E5%AE%89%E8%A3%85/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>基于 Consul 的 Docker Swarm 服务发现</title>
-    <link href="http://www.javacn.top/20170420/docker_consul_swarm/"/>
-    <id>http://www.javacn.top/20170420/docker_consul_swarm/</id>
-    <published>2017-04-20T02:09:38.000Z</published>
-    <updated>2017-05-03T03:16:54.602Z</updated>
-    
-    <content type="html"><![CDATA[<p>Docker 是一种新型的虚拟化技术，它的目标在于实现轻量级操作系统的虚拟化。相比传统的虚拟化方案，Docker 虚拟化技术有一些很明显的优势：启动容器的速度明显快于传统虚拟化技术，同时创建一台虚拟机占用的资源也要远远小于传统的虚拟技术。Swarm 是 Docker 集群化的技术，而 Swarm 集群化 Docker 离不开服务发现。Consul 能够解决 Swarm 的服务发现问题。本文将介绍 Swarm 如何使用 Consul 作为服务发现。</p>
-<h1 id="Docker-Swarm-服务发现"><a href="#Docker-Swarm-服务发现" class="headerlink" title="Docker Swarm 服务发现"></a>Docker Swarm 服务发现</h1><p>Docker 集群化可以通过 Swarm 来实现。Swarm 对 Docker 集群中节点的动态加入和退出的感知叫做服务发现。Docker Swarm 支持多种服务发现方式，下面进行详细介绍。</p>
-<a id="more"></a>
-<h2 id="服务发现方式"><a href="#服务发现方式" class="headerlink" title="服务发现方式"></a>服务发现方式</h2><p>  Docker Swarm 支持的服务发现方式主要有以下几种：</p>
-<ol>
-<li>Token<br>Token 发现策略使用 ID 来唯一标识集群，每一个节点通过指定集群 ID 来标识加入的集群。所以首先使用 Swarm 产生一个集群 ID，然后每一个节点通过 join Cluster-ID 动态加入这个集群。</li>
-<li>Nodes<br>Nodes 发现策略依赖于集群节点，我们在集群 manage 节点执行加入集群指令时，就需要指定要加入集群的其他节点。所以集群成员需要预先定义。</li>
-<li>File<br>首先将加入集群的节点存储在一个文件中，我们在集群 manage 节点执行加入集群指令时，指定存储集群中所有节点的文件。所以集群成员也是需要预先定义。</li>
-<li>分布式 key/value 存储<br>Swarm 使用第三方软件的 key/value 形式存储节点信息，分布式 key-value 存储不仅能够实现 Swarm 节点的动态加入，同时提供了很多其他的功能，直观显示集群中的每个节点以及每个节点提供的服务等。<br>Swarm 通过 key/value 存储实现的服务发现有三种，接下来，分别进行介绍。</li>
-</ol>
-<h3 id="分布式-key-value-存储"><a href="#分布式-key-value-存储" class="headerlink" title="分布式 key/value 存储"></a>分布式 key/value 存储</h3><p>Swarm 通过分布式 key/value 存储实现的服务发现方式有以下三种：</p>
-<ol>
-<li>ZooKeeper<br>ZooKeeper 是比较成熟的分布式 key/value 存储，但是使用复杂，入门门槛较高，需要借助第三方软件来发送 key-value 数据给 ZooKeeper 完成数据存储。</li>
-<li>Etcd<br>Etcd 部署使用简单，提供了可靠的数据存储，但是需要借助第三方软件，手动将 key/value 数据发送给 Etcd 来存储。</li>
-<li>Consul<br>Consul 提供了可靠的数据存储，并且提供了服务发现框架，不需要借助第三方软件。<br>本文主要介绍第三方服务发现 Consul 在 Docker Swarm 中的的使用，接下来对 Consul 进行介绍。</li>
-</ol>
-<h1 id="Consul-简介"><a href="#Consul-简介" class="headerlink" title="Consul 简介"></a>Consul 简介</h1><p>Consul 提供了分布式环境中服务的注册和发现，支持分布式，高可用，多数据中心。</p>
-<h3 id="Consul-重要概念"><a href="#Consul-重要概念" class="headerlink" title="Consul 重要概念"></a>Consul 重要概念</h3><p>Consul 中的重要概念：</p>
-<ol>
-<li>Agent：Consul 集群中每个成员运行的守护进程，以 Client 或者 Server 的模式存在。</li>
-<li>Client：发送 RPC 请求给服务器的 Agent。</li>
-<li>Server：是一个 Agent，负责响应 RPC 查询，维护集群状态，参与 Raft 仲裁等。<br>Server 有三种存在状态。接下来，分别介绍这三种状态以及它们之间的关系。</li>
-</ol>
-<h3 id="Server-存在状态"><a href="#Server-存在状态" class="headerlink" title="Server 存在状态"></a>Server 存在状态</h3><p>Server 的三种状态形式：Leader，Follower，Candidate。</p>
-<ol>
-<li>Candidate：Server 参与 Raft 仲裁，竞选期间所有服务器的状态。</li>
-<li>Leader：Server 参与 Raft 仲裁，竞选结束获胜服务器的状态。</li>
-<li>Follower：Server 参与 Raft 仲裁，竞选结束未获胜服务器的状态。</li>
-</ol>
-<p>三种状态之间关系如下：<br>Consul 集群 Server 节点中要有一个 Leader。<br>Leader 负责维护集群中所有节点的状态。<br>当集群还没有 Leader 或者 Leader 出现故障时候，所有的 Server 运行 Raft 算法，开始竞选。<br>竞选期间所有 Server 的状态称为 Candidate。<br>最终集群中的 Server 经过竞选，只有一台 Server 获胜，竞选结束。<br>这个时候集群中获胜的 Server 称为 Leader，其他的 Server 称为 Follower。  </p>
-<h3 id="Consul-架构"><a href="#Consul-架构" class="headerlink" title="Consul 架构"></a>Consul 架构</h3><p>为了从整体上对 Consul 有一个了解，下面以一个数据中心的 Consul 部署结构图来对 Consul 进行说明。<br>一个数据中心的 Consul 集群由客户端和服务器组成，服务器以 Leader 和 Follower 两种角色存在。<br>Client 会定时向 Server 发送 RPC 请求，汇报自己的运行状态。<br>Leader 收到 Client 的 RPC 请求，会给 client 发送 RPC 响应，同时存储 Client 的状态等信息。<br>Follower 收到 Client 的 RPC 请求，会转发给 Leader。<br>Leader 存储该 Client 的信息。<br>Consul 的架构如下图所示。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/基于-Consul-的-Docker-Swarm-服务发现/image001.png" alt="图 1. Consul 架构图">  </p>
-<p>对 Swarm 的服务发现策略和 Consul 有了整体了解后，下面具体介绍在代码实现中，Swarm 如何使用 Consul 作为服务发现。</p>
-<h1 id="Swarm-Consul-服务发现源码解析"><a href="#Swarm-Consul-服务发现源码解析" class="headerlink" title="Swarm Consul 服务发现源码解析"></a>Swarm Consul 服务发现源码解析</h1><p>在 GitHub 官网可以下载<a href="https://github.com/docker/swarm?cm_mc_uid=48328830484514900634274&amp;cm_mc_sid_50200000=1490853421" target="_blank" rel="external">Swarm源码</a>。本文以 Swarm 1.2.4 为例，通过介绍 swarm join 的流程，来说明 Swarm 使用 Consul 的服务发现过程。</p>
-<p>首先，我们简单说明 Swarm 源码文件夹结构以及每个文件的功能。</p>
-<h2 id="Swarm-源码文件夹结构"><a href="#Swarm-源码文件夹结构" class="headerlink" title="Swarm 源码文件夹结构"></a>Swarm 源码文件夹结构</h2><p>Swarm 源码的文件夹结构如下表 1 所示。  </p>
-<table>
-<thead>
-<tr>
-<th>文件夹名称</th>
-<th>文件夹说明</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>api</td>
-<td>Swarm对外提供的 API</td>
-</tr>
-<tr>
-<td>cli</td>
-<td>Swarm命令行解析</td>
-</tr>
-<tr>
-<td>cluster</td>
-<td>Swarm集群管理</td>
-</tr>
-<tr>
-<td>discovery</td>
-<td>Swarm 集群发现（Token 方式）</td>
-</tr>
-<tr>
-<td>docs</td>
-<td>Swarm 文档</td>
-</tr>
-<tr>
-<td>experimental</td>
-<td>Swarm 实验性功能</td>
-</tr>
-<tr>
-<td>Godeps</td>
-<td>Go 语言包依赖管理工具</td>
-</tr>
-<tr>
-<td>scheduler</td>
-<td>Swarm 调度器</td>
-</tr>
-<tr>
-<td>script</td>
-<td>Swarm 脚本</td>
-</tr>
-<tr>
-<td>swarmclient</td>
-<td>Docker Engine 操作 Swarm 的 API</td>
-</tr>
-<tr>
-<td>test</td>
-<td>Swarm 测试</td>
-</tr>
-<tr>
-<td>vendor</td>
-<td>Swarm 的依赖包</td>
-</tr>
-<tr>
-<td>version</td>
-<td>Swarm 版本</td>
-</tr>
-<tr>
-<td>main.go</td>
-<td>Swarm 入口函数</td>
-</tr>
-</tbody>
-</table>
-<p>表 1. Swarm 源码的文件夹结构  </p>
-<p>Swarm join 是 Swarm 节点加入 Swarm 集群的命令，并且节点在执行 swarm join 命令时，可以指定 Swarm 的服务发现方式。在对 Swarm 源码的文件结构有了整体了解后，接下来我们通过分析 swarm join 的源码，理解 Swarm 使用 Consul 作为服务发现的过程。</p>
-<h2 id="Swarm-join-源码解析"><a href="#Swarm-join-源码解析" class="headerlink" title="Swarm join 源码解析"></a>Swarm join 源码解析</h2><p>Swarm 支持一定的命令行操作。当客户端输入 swarm join 命令时，Swarm 会首先在自己支持的命令集合中找到该命令，同时找到该命令对应的处理函数。<br>然后执行 swarm join 的处理函数。在该处理函数中，swarm 会根据命令行输入的服务发现策略 Consul，初始化一个 Consul 客户端，而后向 Consul 服务器发送注册消息，完成客户端加入集群的操作。</p>
-<p>Swarm 所有操作的入口函数是 main 函数。<br><figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">main</span><span class="params">()</span></span> &#123;</div><div class="line">  cli.Run()</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>main 函数的功能是启动命令行应用程序。命令行应用程序在启动的时候主要做三件事：1、创建命令行应用程序。2、初始化 Swarm 支持的命令。3、运行命令行应用程序。其中初始化 Swarm 支持的命令，定义了每个版本的 Swarm 支持的命令行集合，以及每个命令对应的处理函数。下面是命令行程序启动时的主要代码。<br><figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">Run</span><span class="params">()</span></span> &#123;</div><div class="line">    <span class="comment">//1、创建 go 的命令行应用 app</span></div><div class="line">    app := cli.NewApp()</div><div class="line">    <span class="comment">//2、初始化 app 的命令行参数</span></div><div class="line">    app.Commands = commands</div><div class="line">    <span class="comment">//3、运行 app</span></div><div class="line">    <span class="keyword">if</span> err := app.Run(os.Args); err != <span class="literal">nil</span> &#123;</div><div class="line">        log.Fatal(err)</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>以上代码清单位于文件 cli/cli.go。下面对以上代码的主要功能进行详细说明。</p>
-<ol>
-<li>创建命令行应用程序<br>该功能是利用第三方库 github.com/codegangsta/cli 来创建 Go 的命令行应用程序。在 Swarm 的第三方依赖文件夹 vendor/github.com/codegangsta/cli 可以找到创建 Go 应用程序的依赖文件。</li>
-<li>初始化 Swarm 支持的命令<br>这个部分是很关键的一部分，该版本的 Swarm 支持的所有命令以及每个命令对应的处理函数等信息都在此处完成初始化。Swarm 使用数组 commands 完成所有命令的初始化。commands 的定义位于文件 cli\commands.go，关键代码如下。<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">var</span> (</div><div class="line">    commands = []cli.Command&#123;</div><div class="line">        &#123;</div><div class="line">            Name:      <span class="string">"create"</span>,</div><div class="line">            ShortName: <span class="string">"c"</span>,</div><div class="line">            Usage:     <span class="string">"Create a cluster"</span>,</div><div class="line">            Action:    create,</div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            Name:      <span class="string">"list"</span>,</div><div class="line">            ShortName: <span class="string">"l"</span>,</div><div class="line">            Usage:     <span class="string">"List nodes in a cluster"</span>,</div><div class="line">           Flags:     []cli.Flag&#123;flTimeout, flDiscoveryOpt&#125;,</div><div class="line">            Action:    list,</div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            Name:      <span class="string">"manage"</span>,</div><div class="line">            ShortName: <span class="string">"m"</span>,</div><div class="line">            Usage:     <span class="string">"Manage a docker cluster"</span>,</div><div class="line">            <span class="comment">//Flags 定义...</span></div><div class="line">            Action: manage,</div><div class="line">        &#125;,</div><div class="line">        &#123;</div><div class="line">            Name:      <span class="string">"join"</span>,</div><div class="line">            ShortName: <span class="string">"j"</span>,</div><div class="line">            Usage:     <span class="string">"Join a docker cluster"</span>,</div><div class="line">            <span class="comment">//Flags 定义...</span></div><div class="line">            Action:    join,</div><div class="line">            &#125;,</div><div class="line">        &#125;</div><div class="line">)</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>在上面的 commands 的定义中，Name 字段指定了 Swarm 支持的每个命令，Action 字段指定了每个命令的处理函数。下面我们把 swarm join 命令和上面的定义结合起来，具体说明下当在节点的终端输入 join 命令时，swarm 代码是如何执行的。  </p>
-<p>join 命令在终端的使用如下：<br><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> run -d -p <span class="number">2376</span>:<span class="number">2375</span> --name swarm-slave-<span class="number">01</span> swarm join -addr <span class="number">192.168</span>.<span class="number">1.28</span>:<span class="number">2376</span> consul://<span class="number">192.168</span>.<span class="number">1.28</span>:<span class="number">8500</span></div></pre></td></tr></table></figure></p>
-<p>当我们在终端输入以上命令，Swarm 会首先解析命令，解析出用户要执行的命令是 join 命令。然后在上面 commands 的定义中找到 join 命令的处理函数是 join 函数。接下来就调用 join 函数完成 join 命令的执行。<br>下面代码展示了 Swarm 解析执行终端命令的过程。<br><figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(a *App)</span> <span class="title">Run</span><span class="params">(arguments []<span class="keyword">string</span>)</span> <span class="params">(err error)</span></span>&#123;</div><div class="line">    args := context.Args()</div><div class="line">    <span class="keyword">if</span> args.Present() &#123;</div><div class="line">       <span class="comment">//...</span></div><div class="line">        c := a.Command(name)</div><div class="line">        <span class="keyword">if</span> c != <span class="literal">nil</span> &#123;</div><div class="line">           <span class="comment">//调用 Command 的 Run 函数来执行操作</span></div><div class="line">            <span class="keyword">return</span> c.Run(context)</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">    <span class="comment">// Run default Action</span></div><div class="line">    a.Action(context)</div><div class="line">&#125;</div><div class="line"><span class="comment">//Command 的 Run 函数</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(c Command)</span> <span class="title">Run</span><span class="params">(ctx *Context)</span> <span class="title">error</span></span> &#123;</div><div class="line">    context.Command = c</div><div class="line"><span class="comment">//调用 Command 的 Action 函数，如果我们输入的是 join 函数，接下来就会执行 join 函数</span></div><div class="line">    c.Action(context)</div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
-<p>以上代码清单位于 github.com/codegangsta/cli/app.go 中的 Run 函数。  </p>
-<p>Swarm 在初始化的时候，会初始化它支持的第三方服务发现。当我们在终端指定第三方服务发现的时候，Swarm 会调用对应的第三方服务发现接口，创建并初始化第三方服务发现客户端，然后向第三方服务发现服务器发送注册消息，完成注册。</p>
-<p>下一步，我们将要考虑 join 函数的具体实现，Swarm 创建 Consul 客户端以及向 Consul 服务器的注册过程。join 函数如下所示。<br><figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">join</span><span class="params">(c *cli.Context)</span></span> &#123;</div><div class="line">    dflag := getDiscovery(c)</div><div class="line">    <span class="number">1</span>、创建服务发现</div><div class="line">    d, err := discovery.New(dflag, hb, ttl, getDiscoveryOpt(c))</div><div class="line">    <span class="keyword">for</span> &#123;</div><div class="line">        <span class="number">2</span>、注册服务发现</div><div class="line">        <span class="keyword">if</span> err := d.Register(addr); err != <span class="literal">nil</span> &#123;<span class="comment">//....&#125;</span></div><div class="line">    &#125;<span class="comment">//.</span></div></pre></td></tr></table></figure></p>
-<p>以上代码位于 cli/join.go。  </p>
-<p>join 函数主要功能是：创建服服务发现客户端和向服务发现服务器注册。</p>
-<ol>
-<li><p>创建服务发现<br>创建第三方服务发现客户端使用的是简单工厂模式。Swarm 会首先将支持的第三方服务发现初始化在一个 map 中，然后根据我们在命令行指定的第三方服务发现，去调用对应的初始化方法。所以如果我们自己写了一个第三方服务发现软件，可以很方便地嵌入到 Swarm 中。<br>创建服务发现的数据流程图如下图 所示。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/基于-Consul-的-Docker-Swarm-服务发现/image002.png" alt="创建服务发现流程图">  </p>
-<p>Swarm 首先调用 discovery 包下面的 New 函数，在该函数中调用 Backen 接口的 Initialize 方法，在 Initialize 方法中，调用 libkv 包下的 NewStore 方法。在 NewStore 方法中，首先判断 Swarm 是否支持终端输入的服务发现，如果支持，就去调用该服务发现的初始化方法完成第三方服务发现的初始化。</p>
-<p>Consul 初始化函数 New 函数位于 github/com/docker/libkv/store/consul/consul.go，如下所示。</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="function"><span class="keyword">func</span> <span class="title">New</span><span class="params">(endpoints []<span class="keyword">string</span>, options *store.Config)</span> <span class="params">(store.Store, error)</span></span> &#123;</div><div class="line">    s := &amp;Consul&#123;&#125;</div><div class="line">    config := api.DefaultConfig()</div><div class="line">    s.config = config</div><div class="line">    config.HttpClient = http.DefaultClient</div><div class="line">    config.Address = endpoints[<span class="number">0</span>]</div><div class="line">    config.Scheme = <span class="string">"http"</span></div><div class="line">    ....</div><div class="line">    <span class="comment">// Creates a new client</span></div><div class="line">    client, err := api.NewClient(config)</div><div class="line">    ...</div><div class="line">    s.client = client</div><div class="line">    <span class="keyword">return</span> s, <span class="literal">nil</span></div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<p>在 Consul 的初始化函数中，新创建一个 Consul 客户端，并完成 Consul 客户端一些参数的初始化。  </p>
-</li>
-<li><p>注册服务发现<br>consul 完成服务发现的初始化，就会发送注册信息给 consul 服务器完成注册。key/value 的注册代码位于 github.com\docker\docker\pkg\discovery\kv\kv.go ，如下所示：</p>
-<figure class="highlight go"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="comment">// Register is exported</span></div><div class="line"><span class="function"><span class="keyword">func</span> <span class="params">(s *Discovery)</span> <span class="title">Register</span><span class="params">(addr <span class="keyword">string</span>)</span> <span class="title">error</span></span> &#123;</div><div class="line">    opts := &amp;store.WriteOptions&#123;TTL: s.ttl&#125;</div><div class="line">    <span class="keyword">return</span> s.store.Put(path.Join(s.path, addr), []<span class="keyword">byte</span>(addr), opts)</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-</li>
-</ol>
-<p>Consul 发送注册地址到 Consul 服务器，完成 Consul 的注册。</p>
-<h1 id="Consul-实现-Docker-Swarm-服务注册例子"><a href="#Consul-实现-Docker-Swarm-服务注册例子" class="headerlink" title="Consul 实现 Docker Swarm 服务注册例子"></a>Consul 实现 Docker Swarm 服务注册例子</h1><p>  结合Swarm join 源码解析，下面介绍如何使用 Consul 实现 Docker Swarm 服务发现。<br>  在 Swarm 的 Client 节点（IP 地址为 192.168.1.28）执行加入集群的指令，并指定 Consul 作为服务发现。</p>
-  <figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> run -d --name swarm-slave-<span class="number">04</span> itaas-docker-registry:<span class="number">5000</span>/public/swarm:<span class="number">1.2</span>.<span class="number">3</span> join --addr <span class="number">192.168</span>.<span class="number">1.28</span>:<span class="number">2375</span> consul://<span class="number">192.168</span>.<span class="number">1.28</span>:<span class="number">8500</span> <span class="number">8</span>c7a6ec6d48ed526a81504879755e3772978790df4bf2476693b144</div></pre></td></tr></table></figure>
-<p>  使用 Consul 的 Web UI 查看命令执行结果。在浏览器地址栏输入 <a href="http://192.168.1.28:8500，然后选择" target="_blank" rel="external">http://192.168.1.28:8500，然后选择</a> key/value 选项卡，在该选项卡下选择 docker/swarm/nodes，可以看到 192.168.1.28 这个节点已经注册到 Docker Swarm 集群。  </p>
-<p>  Consul 服务发现的结果如下图所示。<br>  <img src="http://op06ugvox.bkt.clouddn.com/hexo/基于-Consul-的-Docker-Swarm-服务发现/image004.png" alt=""></p>
-<h1 id="总结与展望"><a href="#总结与展望" class="headerlink" title="总结与展望"></a>总结与展望</h1><p>  本文概述了 Docker Swarm 服务发现的四种策略并进行了简单的比较，简单介绍了 Consul，详述了 Swarm 使用 Consul 作为服务发现的代码流程，最后用一个例子说明了 Docker Swarm 使用 Consul 作为服务发现的过程，希望能够让大家对 Swarm 服务发现的过程有所了解。<br>  通过对 Swarm 服务发现源码的解析，可以看到 Swarm 源码中使用第三方 key/value 作为服务发现的实现采用了简单工厂模式，我们也可以很容易地将其他的第三方 key/value 插件，以及自己设计的服务发现插件嵌入到 Swarm 的服务发现中。</p>
-<h1 id="参考资料"><a href="#参考资料" class="headerlink" title="参考资料"></a>参考资料</h1><h2 id="学习"><a href="#学习" class="headerlink" title="学习"></a>学习</h2><ul>
-<li>参考<a href="http://dockone.io/article/667" target="_blank" rel="external">Consul、Etcd 和 ZooKeeper 的区别</a>，了解第三方服务发现的区别  </li>
-<li>参考<a href="https://www.consul.io/docs/internals/architecture.html" target="_blank" rel="external">Consul 架构图</a>，了解更多 Consul 的基本架构  </li>
-<li>参考<a href="http://xueshu.baidu.com/s?wd=paperuri%3A%28ec4d03ead7ea49864cf6f288c5df100b%29&amp;filter=sc_long_sign&amp;tn=SE_xueshusource_2kduw22v&amp;sc_vurl=http%3A%2F%2Fwww.cnki.com.cn%2FArticle%2FCJFDTotal-DZRU201403195.htm&amp;ie=utf-8&amp;sc_us=11067160892004884402" target="_blank" rel="external">热备份</a>，查看热备份概念  </li>
-<li>参考<a href="http://www.jdon.com/artichect/raft.html" target="_blank" rel="external">Raft</a>，查看 Raft 算法实现原理  </li>
-<li>参考<a href="http://dockone.io/article/662" target="_blank" rel="external">Swarm 代码框架</a>，了解 Swarm 代码的整体设计  </li>
-<li>参考<a href="https://github.com/docker/swarm" target="_blank" rel="external">Swarm 源码文件夹结构</a>，了解 Swarm 源码的文件夹结构  </li>
-<li><p>参考<a href="http://blog.csdn.net/screscent/article/details/51362116" target="_blank" rel="external">Swarm manage 和 Store 流程解析</a>，了解更多 Swarm 第三方服务发现执行流程  </p>
-<hr>
-</li>
-</ul>
-<h2 id="相关主题"><a href="#相关主题" class="headerlink" title="相关主题"></a>相关主题</h2><ul>
-<li>访问 developerWorks 中国 <a href="http://www.ibm.com/developerworks/cn/cloud/bluemix/index.html" target="_blank" rel="external">IBM Bluemix 资源中心</a>：本专题提供了丰富的文章、教程和演示等学习资源，带您由浅入深地了解 Bluemix。  </li>
-<li>访问 developerWorks <a href="http://www.ibm.com/developerworks/cn/cloud/" target="_blank" rel="external">云计算专区</a>，developerWorks 为开发人员和专业人员推出的云计算社区和技术资源。您可以了解关于云计算的更多信息，获取技术文档、how-to 文章、培训、下载、产品信息以及其他最新技术资源，并参与社区讨论。  </li>
-<li><a href="https://www.ibm.com/developerworks/cn/premium/" target="_blank" rel="external">IBM developerWorks Premium</a> 是一项针对开发人员的会员计划，它提供了功能强大的工具、资源和支持，旨在帮助您快速设计原型、开发和部署成功的云项目。</li>
-</ul>
-]]></content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;Docker 是一种新型的虚拟化技术，它的目标在于实现轻量级操作系统的虚拟化。相比传统的虚拟化方案，Docker 虚拟化技术有一些很明显的优势：启动容器的速度明显快于传统虚拟化技术，同时创建一台虚拟机占用的资源也要远远小于传统的虚拟技术。Swarm 是 Docker 集群化的技术，而 Swarm 集群化 Docker 离不开服务发现。Consul 能够解决 Swarm 的服务发现问题。本文将介绍 Swarm 如何使用 Consul 作为服务发现。&lt;/p&gt;
-&lt;h1 id=&quot;Docker-Swarm-服务发现&quot;&gt;&lt;a href=&quot;#Docker-Swarm-服务发现&quot; class=&quot;headerlink&quot; title=&quot;Docker Swarm 服务发现&quot;&gt;&lt;/a&gt;Docker Swarm 服务发现&lt;/h1&gt;&lt;p&gt;Docker 集群化可以通过 Swarm 来实现。Swarm 对 Docker 集群中节点的动态加入和退出的感知叫做服务发现。Docker Swarm 支持多种服务发现方式，下面进行详细介绍。&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="docker" scheme="http://www.javacn.top/categories/docker/"/>
-    
-    
-      <category term="转载" scheme="http://www.javacn.top/tags/%E8%BD%AC%E8%BD%BD/"/>
-    
-      <category term="docker" scheme="http://www.javacn.top/tags/docker/"/>
-    
-      <category term="swarm" scheme="http://www.javacn.top/tags/swarm/"/>
-    
-      <category term="consul" scheme="http://www.javacn.top/tags/consul/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>基于consul的Docker-overlay跨多宿主机容器网络</title>
-    <link href="http://www.javacn.top/20170420/docker_consul_overlay/"/>
-    <id>http://www.javacn.top/20170420/docker_consul_overlay/</id>
-    <published>2017-04-20T02:00:59.000Z</published>
-    <updated>2017-05-03T03:16:40.543Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="环境限制"><a href="#环境限制" class="headerlink" title="环境限制"></a>环境限制</h1><ul>
-<li>必须安装key-value存储服务，如consul</li>
-<li>宿主机已经安装docker engine</li>
-<li>宿主机的hostname必须不同</li>
-<li>内核大于3.16</li>
-</ul>
-<a id="more"></a>
-<h1 id="环境准备及角色分配"><a href="#环境准备及角色分配" class="headerlink" title="环境准备及角色分配"></a>环境准备及角色分配</h1><ul>
-<li>两台ubuntu的server</li>
-</ul>
-<table>
-<thead>
-<tr>
-<th>主机名</th>
-<th>ip</th>
-<th>内核</th>
-<th>启动docker容器名称</th>
-<th>docker engine版本</th>
-<th>consul服务</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>test26</td>
-<td>192.168.2.26</td>
-<td>4.10.4-1.el7.elrepo.x86_64</td>
-<td>test26（centOS7）</td>
-<td>17.03.0-ce</td>
-<td>server</td>
-</tr>
-<tr>
-<td>test139</td>
-<td>192.168.2.139</td>
-<td>4.10.4-1.el7.elrepo.x86_64</td>
-<td>test139（centOS7）</td>
-<td>17.03.0-ce</td>
-<td>client</td>
-</tr>
-</tbody>
-</table>
-<ul>
-<li><p>实验目标：</p>
-<p>  两个CentOS7容器test26,test139网络互通, <strong>注意本文中的zhaoshg@test26和zhaoshg@test139</strong></p>
-</li>
-</ul>
-<h2 id="防火墙开放端口"><a href="#防火墙开放端口" class="headerlink" title="防火墙开放端口"></a>防火墙开放端口</h2><p>分别在两台机器上运行：<br><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$sudo</span> firewall-cmd --permanent --add-port=&#123;<span class="number">8500</span>/tcp,<span class="number">8300</span>/tcp,<span class="number">8301</span>/tcp,<span class="number">3375</span>/tcp,<span class="number">2375</span>/tcp&#125;</div><div class="line"><span class="variable">$sudo</span> firewall-cmd --reload</div><div class="line"><span class="variable">$sudo</span> firewall-cmd  --list-all</div></pre></td></tr></table></figure></p>
-<h2 id="运行分布式发现服务协调软件：consul"><a href="#运行分布式发现服务协调软件：consul" class="headerlink" title="运行分布式发现服务协调软件：consul"></a>运行分布式发现服务协调软件：consul</h2><ul>
-<li><p>拉取consul镜像</p>
-<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> pull consul</div></pre></td></tr></table></figure>
-</li>
-<li><p>启动consul</p>
-<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line">[zhaoshg@test ~]<span class="variable">$docker</span> run -d -it --net=host --name=consul_server -v /home/zhaoshg/consul_data:/<span class="keyword">data</span> -e <span class="string">'CONSUL_LOCAL_CONFIG=&#123;"skip_leave_on_interrupt": true&#125;'</span> -p <span class="number">8300</span>:<span class="number">8300</span> -p <span class="number">8301</span>:<span class="number">8301</span> -p <span class="number">8301</span>:<span class="number">8301</span>/udp -p <span class="number">8302</span>:<span class="number">8302</span> -p <span class="number">8302</span>:<span class="number">8302</span>/udp -p <span class="number">8400</span>:<span class="number">8400</span> -p <span class="number">8500</span>:<span class="number">8500</span> -p <span class="number">53</span>:<span class="number">53</span>/udp consul agent -server -bootstrap -bind=<span class="number">192.168</span>.<span class="number">2.26</span></div><div class="line">[nrj@test ~]<span class="variable">$docker</span> run -d -it --net=host --name=consul_client -v /home/zhaoshg/consul_data:/<span class="keyword">data</span> -e <span class="string">'CONSUL_LOCAL_CONFIG=&#123;"leave_on_terminate": true&#125;'</span> -p <span class="number">8300</span>:<span class="number">8300</span> -p <span class="number">8301</span>:<span class="number">8301</span> -p <span class="number">8301</span>:<span class="number">8301</span>/udp -p <span class="number">8302</span>:<span class="number">8302</span> -p <span class="number">8302</span>:<span class="number">8302</span>/udp -p <span class="number">8400</span>:<span class="number">8400</span> -p <span class="number">8500</span>:<span class="number">8500</span> -p <span class="number">53</span>:<span class="number">53</span>/udp  consul agent -bind=<span class="number">192.168</span>.<span class="number">2.139</span> -join=<span class="number">192.168</span>.<span class="number">2.26</span></div></pre></td></tr></table></figure>
-</li>
-<li><p>可以启动一个server和多个agent(此处是一个)，然后让agent，join到consul集群中</p>
-</li>
-<li>启动时可能会遇到55/udp被占用，多半是虚拟网卡的问题，卸载就好：<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$sudo</span> virsh net-list</div><div class="line"><span class="variable">$sudo</span> virsh net-destroy default </div><div class="line"><span class="variable">$sudo</span> virsh net-undefine default</div><div class="line"><span class="variable">$sudo</span> service libvirtd restart</div></pre></td></tr></table></figure>
-</li>
-</ul>
-<h2 id="配置Docker并重启"><a href="#配置Docker并重启" class="headerlink" title="配置Docker并重启"></a>配置Docker并重启</h2><ul>
-<li><p>在每一台docker宿主机上做如下配置，并重启docker</p>
-<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$sudo</span> vim /etc/docker/daemon.json</div><div class="line">//添加</div><div class="line">&#123;</div><div class="line">  <span class="string">"tls"</span>: false,</div><div class="line">  <span class="string">"hosts"</span>: [<span class="string">"unix:///var/run/docker.sock"</span>,<span class="string">"tcp://0.0.0.0:2375"</span>],</div><div class="line">  <span class="string">"cluster-store"</span>: <span class="string">"consul://localhost:8500"</span>,</div><div class="line">  <span class="string">"cluster-advertise"</span>: <span class="string">"enp0s3:2375"</span></div><div class="line">&#125;</div><div class="line"><span class="variable">$sudo</span> systemctl daemon-reload</div><div class="line"><span class="variable">$sudo</span> systemctl restart docker</div></pre></td></tr></table></figure>
-</li>
-<li><p>enp0s3代表两台宿主机交互所对应的网卡地址  分别是  192.168.2.26和192.168.2.139</p>
-</li>
-<li><p>集群配置</p>
-<p> <code>–cluster-store=</code> 参数指向docker daemon所使用key value service的地址（本例中即consul的服务地址）<code>–cluster-advertise=</code> 参数决定了所使用网卡以及docker daemon端口信息</p>
-</li>
-<li><p>宿主机配置</p>
-<p>  上面的-H 的参数分别指定了docker demon服务的地址和协议</p>
-</li>
-</ul>
-<h1 id="跨主机网络创建"><a href="#跨主机网络创建" class="headerlink" title="跨主机网络创建"></a>跨主机网络创建</h1><h2 id="创建overlay网络"><a href="#创建overlay网络" class="headerlink" title="创建overlay网络"></a>创建overlay网络</h2><ul>
-<li><p>创建</p>
-<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">[zhaoshg@test26 ~]: <span class="variable">$sudo</span> docker network create -d overlay  mynet</div></pre></td></tr></table></figure>
-</li>
-<li><p>验证<br>在test26上创建的multihost网络，会通过consul服务同步到test139上面</p>
-<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div></pre></td><td class="code"><pre><div class="line">[zhaoshg@test139 ~]:<span class="variable">$docker</span> network ls</div><div class="line">NETWORK ID          NAME                DRIVER              SCOPE</div><div class="line"><span class="number">490</span>c2dbc35e0        bridge              bridge              local</div><div class="line"><span class="number">045</span>f3acd3c28        docker_gwbridge     bridge              local</div><div class="line"><span class="number">023021</span>bcc407        host                host                local</div><div class="line"><span class="number">5104</span>bce70f86        mynet               overlay             global</div><div class="line"><span class="number">3</span>bbb2a39fad8        none                null                local</div></pre></td></tr></table></figure>
-</li>
-</ul>
-<h2 id="创建容器"><a href="#创建容器" class="headerlink" title="创建容器"></a>创建容器</h2><ul>
-<li>创建测试容器<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> run -d -it --net=mynet --name=test1 centos</div><div class="line"><span class="variable">$docker</span> run -d -it --net=mynet --name=test2 centos</div></pre></td></tr></table></figure>
-</li>
-</ul>
-<h2 id="验证网络互通"><a href="#验证网络互通" class="headerlink" title="验证网络互通"></a>验证网络互通</h2><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div></pre></td><td class="code"><pre><div class="line">zhaoshg@test139:~$  PID=$(docker inspect --format &#123;&#123;.State.Pid&#125;&#125; test2)</div><div class="line">zhaoshg@test139:~$  sudo nsenter --target <span class="variable">$PID</span> --mount --uts --ipc --net --pid</div><div class="line"></div><div class="line">[root@<span class="number">2516560</span>c337f /]<span class="comment"># yum install net-tools</span></div><div class="line">[root@<span class="number">2516560</span>c337f /]<span class="comment"># ifconfig</span></div><div class="line"></div><div class="line">eth0: flags=<span class="number">4163</span>&lt;UP,BROADCAST,RUNNING,MULTICAST&gt;  mtu <span class="number">1450</span></div><div class="line">        inet <span class="number">10.0</span>.<span class="number">0.2</span>  netmask <span class="number">255.255</span>.<span class="number">255.0</span>  broadcast <span class="number">0.0</span>.<span class="number">0.0</span></div><div class="line">        inet6 fe80::<span class="number">42</span>:aff:fe00:<span class="number">2</span>  prefixlen <span class="number">64</span>  scopeid <span class="number">0</span>x20&lt;link&gt;</div><div class="line">        ether <span class="number">02</span>:<span class="number">42</span>:<span class="number">0</span>a:<span class="number">00</span>:<span class="number">00</span>:<span class="number">02</span>  txqueuelen <span class="number">0</span>  (Ethernet)</div><div class="line">        RX packets <span class="number">31</span>  bytes <span class="number">2398</span> (<span class="number">2.3</span> KiB)</div><div class="line">        RX errors <span class="number">0</span>  dropped <span class="number">0</span>  overruns <span class="number">0</span>  frame <span class="number">0</span></div><div class="line">        TX packets <span class="number">18</span>  bytes <span class="number">1412</span> (<span class="number">1.3</span> KiB)</div><div class="line">        TX errors <span class="number">0</span>  dropped <span class="number">0</span> overruns <span class="number">0</span>  carrier <span class="number">0</span>  collisions <span class="number">0</span></div><div class="line"></div><div class="line">[root@<span class="number">2516560</span>c337f /]<span class="comment"># </span></div><div class="line"></div><div class="line">[root@<span class="number">2516560</span>c337f /]<span class="comment"># ping 192.168.2.26</span></div><div class="line"></div><div class="line">PING <span class="number">192.168</span>.<span class="number">2.26</span> (<span class="number">192.168</span>.<span class="number">2.26</span>) <span class="number">56</span>(<span class="number">84</span>) bytes of data.</div><div class="line"><span class="number">64</span> bytes from <span class="number">192.168</span>.<span class="number">2.26</span>: icmp_seq=<span class="number">1</span> ttl=<span class="number">63</span> time=<span class="number">0.657</span> ms</div><div class="line"><span class="number">64</span> bytes from <span class="number">192.168</span>.<span class="number">2.26</span>: icmp_seq=<span class="number">2</span> ttl=<span class="number">63</span> time=<span class="number">0.853</span> ms</div><div class="line"><span class="number">64</span> bytes from <span class="number">192.168</span>.<span class="number">2.26</span>: icmp_seq=<span class="number">8</span> ttl=<span class="number">63</span> time=<span class="number">0.463</span> ms</div><div class="line"><span class="number">64</span> bytes from <span class="number">192.168</span>.<span class="number">2.26</span>: icmp_seq=<span class="number">9</span> ttl=<span class="number">63</span> time=<span class="number">0.681</span> ms</div><div class="line">^C</div><div class="line">--- <span class="number">192.168</span>.<span class="number">2.26</span> ping statistics ---</div><div class="line"><span class="number">32</span> packets transmitted, <span class="number">32</span> received, <span class="number">0</span>% packet loss, time <span class="number">31736</span>ms</div><div class="line">rtt min/avg/max/mdev = <span class="number">0.363</span>/<span class="number">0.671</span>/<span class="number">1.486</span>/<span class="number">0.183</span> ms</div><div class="line"></div><div class="line">[root@<span class="number">2516560</span>c337f /]<span class="comment"># </span></div><div class="line"></div><div class="line">[root@<span class="number">2516560</span>c337f /]<span class="comment"># ping 10.0.0.2</span></div><div class="line"></div><div class="line">PING <span class="number">10.0</span>.<span class="number">0.2</span> (<span class="number">10.0</span>.<span class="number">0.2</span>) <span class="number">56</span>(<span class="number">84</span>) bytes of data.</div><div class="line"><span class="number">64</span> bytes from <span class="number">10.0</span>.<span class="number">0.2</span>: icmp_seq=<span class="number">1</span> ttl=<span class="number">64</span> time=<span class="number">0.034</span> ms</div><div class="line"><span class="number">64</span> bytes from <span class="number">10.0</span>.<span class="number">0.2</span>: icmp_seq=<span class="number">2</span> ttl=<span class="number">64</span> time=<span class="number">0.068</span> ms</div><div class="line"><span class="number">64</span> bytes from <span class="number">10.0</span>.<span class="number">0.2</span>: icmp_seq=<span class="number">3</span> ttl=<span class="number">64</span> time=<span class="number">0.061</span> ms</div><div class="line"><span class="number">64</span> bytes from <span class="number">10.0</span>.<span class="number">0.2</span>: icmp_seq=<span class="number">4</span> ttl=<span class="number">64</span> time=<span class="number">0.068</span> ms</div><div class="line">^C</div><div class="line">--- <span class="number">10.0</span>.<span class="number">0.2</span> ping statistics ---</div><div class="line"><span class="number">4</span> packets transmitted, <span class="number">4</span> received, <span class="number">0</span>% packet loss, time <span class="number">3089</span>ms</div><div class="line">rtt min/avg/max/mdev = <span class="number">0.034</span>/<span class="number">0.057</span>/<span class="number">0.068</span>/<span class="number">0.016</span> ms</div><div class="line"></div><div class="line">[root@<span class="number">2516560</span>c337f /]<span class="comment">#</span></div></pre></td></tr></table></figure>
-<ul>
-<li><p>验证结论:</p>
-<p>  test139容器host2的ip=10.0.0.3，可以ping通test26，可以ping通test26上的容器host1的ip=10.0.0.2</p>
-</li>
-</ul>
-<h1 id="如何使用静态ip"><a href="#如何使用静态ip" class="headerlink" title="如何使用静态ip"></a>如何使用静态ip</h1><ul>
-<li>以上的实验步骤。container的ip都是自动分配的，如果需要静态的固定ip，怎么办？</li>
-<li>在创建网络的过程中有区别</li>
-</ul>
-<figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$sudo</span> docker network create -d overlay --ip-range=<span class="number">192.168</span>.<span class="number">20.0</span>/<span class="number">24</span> --gateway=<span class="number">192.168</span>.<span class="number">20.1</span> --subnet=<span class="number">192.168</span>.<span class="number">20.0</span>/<span class="number">24</span> mynet</div><div class="line"><span class="variable">$docker</span> run -d -it --name test1 --net=mynet --ip=<span class="number">192.168</span>.<span class="number">20.2</span> centos</div><div class="line"><span class="variable">$docker</span> run -d -it --name test2 --net=mynet --ip=<span class="number">192.168</span>.<span class="number">20.3</span> centos</div></pre></td></tr></table></figure>
-<h1 id="删除网络"><a href="#删除网络" class="headerlink" title="删除网络"></a>删除网络</h1><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$docker</span> network rm mynet</div></pre></td></tr></table></figure>]]></content>
-    
-    <summary type="html">
-    
-      &lt;h1 id=&quot;环境限制&quot;&gt;&lt;a href=&quot;#环境限制&quot; class=&quot;headerlink&quot; title=&quot;环境限制&quot;&gt;&lt;/a&gt;环境限制&lt;/h1&gt;&lt;ul&gt;
-&lt;li&gt;必须安装key-value存储服务，如consul&lt;/li&gt;
-&lt;li&gt;宿主机已经安装docker engine&lt;/li&gt;
-&lt;li&gt;宿主机的hostname必须不同&lt;/li&gt;
-&lt;li&gt;内核大于3.16&lt;/li&gt;
-&lt;/ul&gt;
-    
-    </summary>
-    
-      <category term="docker" scheme="http://www.javacn.top/categories/docker/"/>
-    
-    
-      <category term="docker" scheme="http://www.javacn.top/tags/docker/"/>
-    
-      <category term="overlay" scheme="http://www.javacn.top/tags/overlay/"/>
-    
-      <category term="consul" scheme="http://www.javacn.top/tags/consul/"/>
-    
-      <category term="多宿主机" scheme="http://www.javacn.top/tags/%E5%A4%9A%E5%AE%BF%E4%B8%BB%E6%9C%BA/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>Hexo的分类和标签设置</title>
-    <link href="http://www.javacn.top/20170419/hexo_tags_categories/"/>
-    <id>http://www.javacn.top/20170419/hexo_tags_categories/</id>
-    <published>2017-04-19T08:29:59.000Z</published>
-    <updated>2017-05-03T03:06:29.720Z</updated>
-    
-    <content type="html"><![CDATA[<h1 id="设置分类列表"><a href="#设置分类列表" class="headerlink" title="设置分类列表"></a>设置分类列表</h1><h2 id="修改根目录下-config-yml"><a href="#修改根目录下-config-yml" class="headerlink" title="修改根目录下_config.yml"></a>修改根目录下_config.yml</h2><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div></pre></td><td class="code"><pre><div class="line"><span class="comment"># Directory</span></div><div class="line"><span class="attr">source_dir:</span> <span class="string">source</span></div><div class="line"><span class="attr">public_dir:</span> <span class="string">public</span></div><div class="line"><span class="comment">#这个是tags的目录</span></div><div class="line"><span class="attr">tag_dir:</span> <span class="string">tags</span></div><div class="line"><span class="attr">archive_dir:</span> <span class="string">archives</span></div><div class="line"><span class="comment">#这个是category的目录</span></div><div class="line"><span class="attr">category_dir:</span> <span class="string">categories</span></div><div class="line"><span class="attr">code_dir:</span> <span class="string">downloads/code</span></div><div class="line"><span class="attr">i18n_dir:</span> <span class="string">:lang</span></div><div class="line"><span class="attr">skip_render:</span></div></pre></td></tr></table></figure>
-<a id="more"></a>
-<h2 id="修改themes下-config-yml"><a href="#修改themes下-config-yml" class="headerlink" title="修改themes下_config.yml"></a>修改themes下_config.yml</h2><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line"><span class="attr">menu:</span></div><div class="line"><span class="attr">  home:</span> <span class="string">/</span></div><div class="line">  <span class="comment">#categories要打开</span></div><div class="line"><span class="attr">  categories:</span> <span class="string">/categories</span></div><div class="line">  <span class="comment">#about: /about</span></div><div class="line"><span class="attr">  archives:</span> <span class="string">/archives</span></div><div class="line">  <span class="comment">#tags要打开</span></div><div class="line"><span class="attr">  tags:</span> <span class="string">/tags</span></div><div class="line">  <span class="comment">#sitemap: /sitemap.xml</span></div><div class="line">  <span class="comment">#commonweal: /404.html</span></div></pre></td></tr></table></figure>
-<h2 id="生成tags和categories页面"><a href="#生成tags和categories页面" class="headerlink" title="生成tags和categories页面"></a>生成tags和categories页面</h2><p>在根目录下执行<br><figure class="highlight ps"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="variable">$hexo</span> n page <span class="string">"tags"</span></div><div class="line"><span class="variable">$hexo</span> n page <span class="string">"categories"</span></div></pre></td></tr></table></figure></p>
-<p>然后去source目录下找到categories/index.md<br>修改：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">---</span></div><div class="line"><span class="attr">title:</span> <span class="string">categories</span></div><div class="line"><span class="attr">date:</span> <span class="number">2017</span><span class="bullet">-04</span><span class="bullet">-19</span> <span class="number">16</span><span class="string">:19:25</span></div><div class="line"><span class="attr">type:</span> <span class="string">categories</span></div><div class="line"><span class="attr">comments:</span> <span class="literal">false</span></div><div class="line"><span class="meta">---</span></div></pre></td></tr></table></figure></p>
-<p>去source目录下找到tags/index.md<br>修改：<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">---</span></div><div class="line"><span class="attr">title:</span> <span class="string">tags</span></div><div class="line"><span class="attr">date:</span> <span class="number">2017</span><span class="bullet">-04</span><span class="bullet">-19</span> <span class="number">16</span><span class="string">:19:25</span></div><div class="line"><span class="attr">type:</span> <span class="string">tags</span></div><div class="line"><span class="attr">comments:</span> <span class="literal">false</span></div><div class="line"><span class="meta">---</span></div></pre></td></tr></table></figure></p>
-<p>这样就配置好了</p>
-<h1 id="在文章中添加tag、分类"><a href="#在文章中添加tag、分类" class="headerlink" title="在文章中添加tag、分类"></a>在文章中添加tag、分类</h1><h2 id="模板中添加"><a href="#模板中添加" class="headerlink" title="模板中添加"></a>模板中添加</h2><p>编辑 /sacaffolds/post.md<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div></pre></td><td class="code"><pre><div class="line"><span class="meta">---</span></div><div class="line"><span class="attr">title:</span> <span class="string">&#123;&#123;</span> <span class="string">title</span> <span class="string">&#125;&#125;</span></div><div class="line"><span class="attr">date:</span> <span class="string">&#123;&#123;</span> <span class="string">date</span> <span class="string">&#125;&#125;</span></div><div class="line"><span class="attr">categories:</span> </div><div class="line"><span class="attr">tags:</span></div><div class="line"><span class="meta">---</span></div></pre></td></tr></table></figure></p>
-<p>这样，new出来的文章默认就带上categories和tags了</p>
-<h2 id="多个tag的写法"><a href="#多个tag的写法" class="headerlink" title="多个tag的写法"></a>多个tag的写法</h2><figure class="highlight yml"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line"><span class="attr">tages:</span> </div><div class="line"><span class="bullet">    -</span> <span class="string">标签1</span></div><div class="line"><span class="bullet">    -</span> <span class="string">标签2</span></div><div class="line">    <span class="string">...</span></div><div class="line"><span class="bullet">    -</span> <span class="string">标签n</span></div></pre></td></tr></table></figure>]]></content>
-    
-    <summary type="html">
-    
-      &lt;h1 id=&quot;设置分类列表&quot;&gt;&lt;a href=&quot;#设置分类列表&quot; class=&quot;headerlink&quot; title=&quot;设置分类列表&quot;&gt;&lt;/a&gt;设置分类列表&lt;/h1&gt;&lt;h2 id=&quot;修改根目录下-config-yml&quot;&gt;&lt;a href=&quot;#修改根目录下-config-yml&quot; class=&quot;headerlink&quot; title=&quot;修改根目录下_config.yml&quot;&gt;&lt;/a&gt;修改根目录下_config.yml&lt;/h2&gt;&lt;figure class=&quot;highlight yml&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;1&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;2&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;3&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;4&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;5&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;6&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;7&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;8&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;9&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;10&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;11&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# Directory&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;source_dir:&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;source&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;public_dir:&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;public&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;#这个是tags的目录&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;tag_dir:&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;tags&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;archive_dir:&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;archives&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;#这个是category的目录&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;category_dir:&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;categories&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;code_dir:&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;downloads/code&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;i18n_dir:&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;:lang&lt;/span&gt;&lt;/div&gt;&lt;div class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;skip_render:&lt;/span&gt;&lt;/div&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-    
-    </summary>
-    
-      <category term="other" scheme="http://www.javacn.top/categories/other/"/>
-    
-    
-      <category term="hexo" scheme="http://www.javacn.top/tags/hexo/"/>
-    
-      <category term="分类" scheme="http://www.javacn.top/tags/%E5%88%86%E7%B1%BB/"/>
-    
-      <category term="categories" scheme="http://www.javacn.top/tags/categories/"/>
-    
-      <category term="标签" scheme="http://www.javacn.top/tags/%E6%A0%87%E7%AD%BE/"/>
-    
-      <category term="tags" scheme="http://www.javacn.top/tags/tags/"/>
     
   </entry>
   
