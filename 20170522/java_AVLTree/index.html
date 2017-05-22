@@ -1,0 +1,1101 @@
+<!doctype html>
+
+
+
+
+<html class="theme-next mist" lang="zh-Hans">
+<head>
+  <meta charset="UTF-8"/>
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+
+
+
+
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+  <link href="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.min.css" rel="stylesheet" type="text/css" />
+
+
+
+
+  
+  
+  
+  
+
+  
+    
+    
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+    
+    
+    <link href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic&subset=latin,latin-ext" rel="stylesheet" type="text/css">
+  
+
+
+
+
+
+
+  
+
+<link href="//maxcdn.bootstrapcdn.com/font-awesome/4.6.2/css/font-awesome.min.css" rel="stylesheet" type="text/css" />
+
+<link href="/css/main.css?v=5.1.0" rel="stylesheet" type="text/css" />
+
+
+
+
+
+
+  <link rel="alternate" href="/atom.xml" title="荆棘之路" type="application/atom+xml" />
+
+
+
+
+  <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico?v=5.1.0" />
+
+
+
+
+
+
+<meta name="description" content="JAVA代码如下">
+<meta name="keywords" content="数据结构与算法,tree">
+<meta property="og:type" content="article">
+<meta property="og:title" content="java实现平衡二叉树">
+<meta property="og:url" content="http://www.javacn.top/20170522/java_AVLTree/index.html">
+<meta property="og:site_name" content="荆棘之路">
+<meta property="og:description" content="JAVA代码如下">
+<meta property="og:updated_time" content="2017-05-22T07:58:00.263Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="java实现平衡二叉树">
+<meta name="twitter:description" content="JAVA代码如下">
+
+
+
+<script type="text/javascript" id="hexo.configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    root: '/',
+    scheme: 'Mist',
+    sidebar: {"position":"left","display":"post","offset":12,"offset_float":0,"b2t":false,"scrollpercent":false},
+    fancybox: true,
+    motion: false,
+    duoshuo: {
+      userId: '0',
+      author: '博主'
+    },
+    algolia: {
+      applicationID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    }
+  };
+</script>
+
+
+
+  <link rel="canonical" href="http://www.javacn.top/20170522/java_AVLTree/"/>
+
+
+
+
+
+  <title> java实现平衡二叉树 | 荆棘之路 </title>
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage" lang="zh-Hans">
+
+  
+
+
+
+
+<script>
+  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+          m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+  })(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+  ga('create', 'UA-98173663-1', 'auto');
+  ga('send', 'pageview');
+</script>
+
+
+  <script type="text/javascript">
+    var _hmt = _hmt || [];
+    (function() {
+      var hm = document.createElement("script");
+      hm.src = "https://hm.baidu.com/hm.js?0a667b2d82398abb1dcb34b2b09ca44a";
+      var s = document.getElementsByTagName("script")[0];
+      s.parentNode.insertBefore(hm, s);
+    })();
+  </script>
+
+
+
+
+
+
+
+
+
+
+  
+  
+    
+  
+
+  <div class="container sidebar-position-left page-post-detail ">
+    <div class="headband"></div>
+
+    <header id="header" class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-wrapper">
+  <div class="site-meta ">
+    
+
+    <div class="custom-logo-site-title">
+      <a href="/"  class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">荆棘之路</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+      
+        <p class="site-subtitle">Just Do It !</p>
+      
+  </div>
+
+  <div class="site-nav-toggle">
+    <button>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+      <span class="btn-bar"></span>
+    </button>
+  </div>
+</div>
+
+<nav class="site-nav">
+  
+
+  
+    <ul id="menu" class="menu">
+      
+        
+        <li class="menu-item menu-item-home">
+          <a href="/" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
+            
+            首页
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-categories">
+          <a href="/categories" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-th"></i> <br />
+            
+            分类
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-archives">
+          <a href="/archives" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
+            
+            归档
+          </a>
+        </li>
+      
+        
+        <li class="menu-item menu-item-tags">
+          <a href="/tags" rel="section">
+            
+              <i class="menu-item-icon fa fa-fw fa-tags"></i> <br />
+            
+            标签
+          </a>
+        </li>
+      
+
+      
+        <li class="menu-item menu-item-search">
+          
+            <a href="javascript:;" class="popup-trigger">
+          
+            
+              <i class="menu-item-icon fa fa-search fa-fw"></i> <br />
+            
+            搜索
+          </a>
+        </li>
+      
+    </ul>
+  
+
+  
+    <div class="site-search">
+      
+  <div class="popup search-popup local-search-popup">
+  <div class="local-search-header clearfix">
+    <span class="search-icon">
+      <i class="fa fa-search"></i>
+    </span>
+    <span class="popup-btn-close">
+      <i class="fa fa-times-circle"></i>
+    </span>
+    <div class="local-search-input-wrapper">
+      <input autocapitalize="off" autocomplete="off" autocorrect="off"
+             placeholder="搜索..." spellcheck="false"
+             type="text" id="local-search-input">
+    </div>
+  </div>
+  <div id="local-search-result"></div>
+</div>
+
+
+
+    </div>
+  
+</nav>
+
+
+
+ </div>
+    </header>
+
+    <main id="main" class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          <div id="content" class="content">
+            
+
+  <div id="posts" class="posts-expand">
+    
+
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+    <link itemprop="mainEntityOfPage" href="http://www.javacn.top/20170522/java_AVLTree/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="name" content="曙光">
+      <meta itemprop="description" content="">
+      <meta itemprop="image" content="/images/face.jpg">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="荆棘之路">
+    </span>
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                java实现平衡二叉树
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">发表于</span>
+              
+              <time title="创建于" itemprop="dateCreated datePublished" datetime="2017-05-22T15:53:14+08:00">
+                2017-05-22
+              </time>
+            
+
+            
+
+            
+          </span>
+
+          
+            <span class="post-category" >
+            
+              <span class="post-meta-divider">|</span>
+            
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              
+                <span class="post-meta-item-text">分类于</span>
+              
+              
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/java/" itemprop="url" rel="index">
+                    <span itemprop="name">java</span>
+                  </a>
+                </span>
+
+                
+                
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                <span class="post-meta-divider">|</span>
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-comment-o"></i>
+                </span>
+                <a class="cloud-tie-join-count" href="/20170522/java_AVLTree/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count join-count" itemprop="commentCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+          
+             <span id="/20170522/java_AVLTree/" class="leancloud_visitors" data-flag-title="java实现平衡二叉树">
+               <span class="post-meta-divider">|</span>
+               <span class="post-meta-item-icon">
+                 <i class="fa fa-eye"></i>
+               </span>
+               
+                 <span class="post-meta-item-text">阅读次数 </span>
+               
+                 <span class="leancloud-visitors-count"></span>
+             </span>
+          
+
+          
+
+          
+            <div class="post-wordcount">
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-file-word-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">字数统计</span>
+                
+                <span title="字数统计">
+                  3,325
+                </span>
+              
+
+              
+                <span class="post-meta-divider">|</span>
+              
+
+              
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-clock-o"></i>
+                </span>
+                
+                  <span class="post-meta-item-text">阅读时长</span>
+                
+                <span title="阅读时长">
+                  15
+                </span>
+              
+            </div>
+          
+
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body han-init-context" itemprop="articleBody">
+
+      
+      
+
+      
+        <p>JAVA代码如下</p>
+<a id="more"></a>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div><div class="line">58</div><div class="line">59</div><div class="line">60</div><div class="line">61</div><div class="line">62</div><div class="line">63</div><div class="line">64</div><div class="line">65</div><div class="line">66</div><div class="line">67</div><div class="line">68</div><div class="line">69</div><div class="line">70</div><div class="line">71</div><div class="line">72</div><div class="line">73</div><div class="line">74</div><div class="line">75</div><div class="line">76</div><div class="line">77</div><div class="line">78</div><div class="line">79</div><div class="line">80</div><div class="line">81</div><div class="line">82</div><div class="line">83</div><div class="line">84</div><div class="line">85</div><div class="line">86</div><div class="line">87</div><div class="line">88</div><div class="line">89</div><div class="line">90</div><div class="line">91</div><div class="line">92</div><div class="line">93</div><div class="line">94</div><div class="line">95</div><div class="line">96</div><div class="line">97</div><div class="line">98</div><div class="line">99</div><div class="line">100</div><div class="line">101</div><div class="line">102</div><div class="line">103</div><div class="line">104</div><div class="line">105</div><div class="line">106</div><div class="line">107</div><div class="line">108</div><div class="line">109</div><div class="line">110</div><div class="line">111</div><div class="line">112</div><div class="line">113</div><div class="line">114</div><div class="line">115</div><div class="line">116</div><div class="line">117</div><div class="line">118</div><div class="line">119</div><div class="line">120</div><div class="line">121</div><div class="line">122</div><div class="line">123</div><div class="line">124</div><div class="line">125</div><div class="line">126</div><div class="line">127</div><div class="line">128</div><div class="line">129</div><div class="line">130</div><div class="line">131</div><div class="line">132</div><div class="line">133</div><div class="line">134</div><div class="line">135</div><div class="line">136</div><div class="line">137</div><div class="line">138</div><div class="line">139</div><div class="line">140</div><div class="line">141</div><div class="line">142</div><div class="line">143</div><div class="line">144</div><div class="line">145</div><div class="line">146</div><div class="line">147</div><div class="line">148</div><div class="line">149</div><div class="line">150</div><div class="line">151</div><div class="line">152</div><div class="line">153</div><div class="line">154</div><div class="line">155</div><div class="line">156</div><div class="line">157</div><div class="line">158</div><div class="line">159</div><div class="line">160</div><div class="line">161</div><div class="line">162</div><div class="line">163</div><div class="line">164</div><div class="line">165</div><div class="line">166</div><div class="line">167</div><div class="line">168</div><div class="line">169</div><div class="line">170</div><div class="line">171</div><div class="line">172</div><div class="line">173</div><div class="line">174</div><div class="line">175</div><div class="line">176</div><div class="line">177</div><div class="line">178</div><div class="line">179</div><div class="line">180</div><div class="line">181</div><div class="line">182</div><div class="line">183</div><div class="line">184</div><div class="line">185</div><div class="line">186</div><div class="line">187</div><div class="line">188</div><div class="line">189</div><div class="line">190</div><div class="line">191</div><div class="line">192</div><div class="line">193</div><div class="line">194</div><div class="line">195</div><div class="line">196</div><div class="line">197</div><div class="line">198</div><div class="line">199</div><div class="line">200</div><div class="line">201</div><div class="line">202</div><div class="line">203</div><div class="line">204</div><div class="line">205</div><div class="line">206</div><div class="line">207</div><div class="line">208</div><div class="line">209</div><div class="line">210</div><div class="line">211</div><div class="line">212</div><div class="line">213</div><div class="line">214</div><div class="line">215</div><div class="line">216</div><div class="line">217</div><div class="line">218</div><div class="line">219</div><div class="line">220</div><div class="line">221</div><div class="line">222</div><div class="line">223</div><div class="line">224</div><div class="line">225</div><div class="line">226</div><div class="line">227</div><div class="line">228</div><div class="line">229</div><div class="line">230</div><div class="line">231</div><div class="line">232</div><div class="line">233</div><div class="line">234</div><div class="line">235</div><div class="line">236</div><div class="line">237</div><div class="line">238</div><div class="line">239</div><div class="line">240</div><div class="line">241</div><div class="line">242</div><div class="line">243</div><div class="line">244</div><div class="line">245</div><div class="line">246</div><div class="line">247</div><div class="line">248</div><div class="line">249</div><div class="line">250</div><div class="line">251</div><div class="line">252</div><div class="line">253</div><div class="line">254</div><div class="line">255</div><div class="line">256</div><div class="line">257</div><div class="line">258</div><div class="line">259</div><div class="line">260</div><div class="line">261</div><div class="line">262</div><div class="line">263</div><div class="line">264</div><div class="line">265</div><div class="line">266</div><div class="line">267</div><div class="line">268</div><div class="line">269</div><div class="line">270</div><div class="line">271</div><div class="line">272</div><div class="line">273</div><div class="line">274</div><div class="line">275</div><div class="line">276</div><div class="line">277</div><div class="line">278</div><div class="line">279</div><div class="line">280</div><div class="line">281</div><div class="line">282</div><div class="line">283</div><div class="line">284</div><div class="line">285</div><div class="line">286</div><div class="line">287</div><div class="line">288</div><div class="line">289</div><div class="line">290</div><div class="line">291</div><div class="line">292</div><div class="line">293</div><div class="line">294</div><div class="line">295</div><div class="line">296</div><div class="line">297</div><div class="line">298</div><div class="line">299</div><div class="line">300</div><div class="line">301</div><div class="line">302</div><div class="line">303</div><div class="line">304</div><div class="line">305</div><div class="line">306</div><div class="line">307</div><div class="line">308</div><div class="line">309</div><div class="line">310</div><div class="line">311</div><div class="line">312</div><div class="line">313</div><div class="line">314</div><div class="line">315</div><div class="line">316</div><div class="line">317</div><div class="line">318</div><div class="line">319</div><div class="line">320</div><div class="line">321</div><div class="line">322</div><div class="line">323</div><div class="line">324</div><div class="line">325</div><div class="line">326</div><div class="line">327</div><div class="line">328</div><div class="line">329</div><div class="line">330</div><div class="line">331</div><div class="line">332</div><div class="line">333</div><div class="line">334</div><div class="line">335</div><div class="line">336</div><div class="line">337</div><div class="line">338</div><div class="line">339</div><div class="line">340</div><div class="line">341</div><div class="line">342</div><div class="line">343</div><div class="line">344</div><div class="line">345</div><div class="line">346</div><div class="line">347</div><div class="line">348</div><div class="line">349</div><div class="line">350</div><div class="line">351</div><div class="line">352</div><div class="line">353</div><div class="line">354</div><div class="line">355</div><div class="line">356</div><div class="line">357</div><div class="line">358</div><div class="line">359</div><div class="line">360</div><div class="line">361</div><div class="line">362</div><div class="line">363</div><div class="line">364</div><div class="line">365</div><div class="line">366</div><div class="line">367</div><div class="line">368</div><div class="line">369</div><div class="line">370</div><div class="line">371</div><div class="line">372</div><div class="line">373</div><div class="line">374</div><div class="line">375</div><div class="line">376</div><div class="line">377</div><div class="line">378</div><div class="line">379</div><div class="line">380</div><div class="line">381</div><div class="line">382</div><div class="line">383</div><div class="line">384</div><div class="line">385</div><div class="line">386</div><div class="line">387</div><div class="line">388</div><div class="line">389</div><div class="line">390</div><div class="line">391</div><div class="line">392</div><div class="line">393</div><div class="line">394</div><div class="line">395</div><div class="line">396</div><div class="line">397</div><div class="line">398</div><div class="line">399</div><div class="line">400</div><div class="line">401</div><div class="line">402</div><div class="line">403</div><div class="line">404</div><div class="line">405</div><div class="line">406</div><div class="line">407</div><div class="line">408</div><div class="line">409</div><div class="line">410</div><div class="line">411</div><div class="line">412</div><div class="line">413</div><div class="line">414</div><div class="line">415</div><div class="line">416</div><div class="line">417</div><div class="line">418</div><div class="line">419</div><div class="line">420</div><div class="line">421</div><div class="line">422</div><div class="line">423</div><div class="line">424</div><div class="line">425</div><div class="line">426</div><div class="line">427</div><div class="line">428</div><div class="line">429</div><div class="line">430</div><div class="line">431</div><div class="line">432</div><div class="line">433</div><div class="line">434</div><div class="line">435</div><div class="line">436</div><div class="line">437</div><div class="line">438</div><div class="line">439</div><div class="line">440</div><div class="line">441</div><div class="line">442</div><div class="line">443</div><div class="line">444</div><div class="line">445</div><div class="line">446</div><div class="line">447</div><div class="line">448</div><div class="line">449</div><div class="line">450</div><div class="line">451</div><div class="line">452</div><div class="line">453</div><div class="line">454</div><div class="line">455</div><div class="line">456</div><div class="line">457</div><div class="line">458</div><div class="line">459</div><div class="line">460</div><div class="line">461</div><div class="line">462</div><div class="line">463</div><div class="line">464</div><div class="line">465</div><div class="line">466</div><div class="line">467</div><div class="line">468</div><div class="line">469</div><div class="line">470</div><div class="line">471</div><div class="line">472</div><div class="line">473</div><div class="line">474</div><div class="line">475</div><div class="line">476</div><div class="line">477</div><div class="line">478</div><div class="line">479</div><div class="line">480</div><div class="line">481</div><div class="line">482</div><div class="line">483</div><div class="line">484</div><div class="line">485</div><div class="line">486</div><div class="line">487</div><div class="line">488</div><div class="line">489</div><div class="line">490</div><div class="line">491</div><div class="line">492</div><div class="line">493</div><div class="line">494</div><div class="line">495</div><div class="line">496</div><div class="line">497</div><div class="line">498</div><div class="line">499</div><div class="line">500</div><div class="line">501</div><div class="line">502</div><div class="line">503</div><div class="line">504</div><div class="line">505</div><div class="line">506</div><div class="line">507</div><div class="line">508</div><div class="line">509</div><div class="line">510</div><div class="line">511</div><div class="line">512</div><div class="line">513</div><div class="line">514</div><div class="line">515</div><div class="line">516</div><div class="line">517</div><div class="line">518</div><div class="line">519</div><div class="line">520</div><div class="line">521</div><div class="line">522</div><div class="line">523</div><div class="line">524</div><div class="line">525</div><div class="line">526</div><div class="line">527</div><div class="line">528</div><div class="line">529</div><div class="line">530</div><div class="line">531</div><div class="line">532</div><div class="line">533</div><div class="line">534</div><div class="line">535</div><div class="line">536</div><div class="line">537</div><div class="line">538</div><div class="line">539</div><div class="line">540</div><div class="line">541</div><div class="line">542</div><div class="line">543</div><div class="line">544</div><div class="line">545</div><div class="line">546</div><div class="line">547</div><div class="line">548</div><div class="line">549</div><div class="line">550</div><div class="line">551</div><div class="line">552</div><div class="line">553</div><div class="line">554</div><div class="line">555</div><div class="line">556</div><div class="line">557</div><div class="line">558</div><div class="line">559</div><div class="line">560</div><div class="line">561</div><div class="line">562</div><div class="line">563</div><div class="line">564</div><div class="line">565</div><div class="line">566</div><div class="line">567</div><div class="line">568</div><div class="line">569</div><div class="line">570</div><div class="line">571</div><div class="line">572</div><div class="line">573</div><div class="line">574</div><div class="line">575</div><div class="line">576</div><div class="line">577</div><div class="line">578</div><div class="line">579</div><div class="line">580</div><div class="line">581</div><div class="line">582</div><div class="line">583</div><div class="line">584</div><div class="line">585</div><div class="line">586</div><div class="line">587</div><div class="line">588</div><div class="line">589</div><div class="line">590</div><div class="line">591</div><div class="line">592</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">package</span> com.utils;  </div><div class="line"><span class="keyword">import</span> java.util.Iterator;  </div><div class="line"><span class="keyword">import</span> java.util.NoSuchElementException;  </div><div class="line"><span class="comment">/** </span></div><div class="line"> * 平衡二叉树 </div><div class="line"> * 定义:首先它是一种特殊的二叉排序树，其次它的左子树和右子树都是平衡二叉树， </div><div class="line"> * 且左子树和右子树的深度之差不超过1 </div><div class="line"> * 平衡因子:可以定义为左子树的深度减去右子树的深度 </div><div class="line"> *  </div><div class="line"> * 平衡二叉树是对二叉排序树的优化，防止二叉排序树在最坏情况下平均查找时间为n， </div><div class="line"> * 二叉排序树在此时形如一个单链表 </div><div class="line"> * 平衡二叉树查找元素的次数不超过树的深度，时间复杂度为logN </div><div class="line"> */  </div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AVLTree</span>&lt;<span class="title">E</span>&gt; </span>&#123;  </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 根节点 </div><div class="line">     */  </div><div class="line">    <span class="keyword">private</span> Entry&lt;E&gt; root = <span class="keyword">null</span>;  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 树中元素个数 </div><div class="line">     */  </div><div class="line">    <span class="keyword">private</span> <span class="keyword">int</span> size = <span class="number">0</span>;  </div><div class="line">      </div><div class="line">    <span class="function"><span class="keyword">public</span> <span class="title">AVLTree</span><span class="params">()</span></span>&#123;  </div><div class="line">          </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">int</span> <span class="title">size</span><span class="params">()</span></span>&#123;  </div><div class="line">        <span class="keyword">return</span> size;  </div><div class="line">    &#125;  </div><div class="line">  </div><div class="line">  </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * <span class="doctag">@param</span> p 最小旋转子树的根节点 </div><div class="line">     * 向左旋转之后p移到p的左子树处，p的右子树B变为此最小子树根节点， </div><div class="line">     * B的左子树变为p的右子树 </div><div class="line">     * 比如：     A(-2)                   B(1) </div><div class="line">     *              \        左旋转       /   \ </div><div class="line">     *             B(0)     ----&gt;       A(0)   \        </div><div class="line">     *             /   \                   \    \ </div><div class="line">     *           BL(0)  BR(0)              BL(0) BR(0)  </div><div class="line">     *  旋转之后树的深度之差不超过1 </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">rotateLeft</span><span class="params">(Entry&lt;E&gt; p)</span> </span>&#123;  </div><div class="line">        System.out.println(<span class="string">"绕"</span>+p.element+<span class="string">"左旋"</span>);  </div><div class="line">        <span class="keyword">if</span>(p!=<span class="keyword">null</span>)&#123;  </div><div class="line">            Entry&lt;E&gt; r = p.right;  </div><div class="line">            p.right = r.left;   <span class="comment">//把p右子树的左节点嫁接到p的右节点，如上图，把BL作为A的右子节点  </span></div><div class="line">            <span class="keyword">if</span> (r.left != <span class="keyword">null</span>) <span class="comment">//如果B的左节点BL不为空，把BL的父节点设为A  </span></div><div class="line">                r.left.parent = p;  </div><div class="line">            r.parent = p.parent;  <span class="comment">//A的父节点设为B的父节点  </span></div><div class="line">            <span class="keyword">if</span> (p.parent == <span class="keyword">null</span>)         <span class="comment">//如果p是根节点  </span></div><div class="line">                root = r;                 <span class="comment">//r变为父节点，即B为父节点  </span></div><div class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (p.parent.left == p)  <span class="comment">//如果p是左子节点  </span></div><div class="line">                p.parent.left = r;        <span class="comment">//p的父节点的左子树为r  </span></div><div class="line">            <span class="keyword">else</span>                          <span class="comment">//如果p是右子节点  </span></div><div class="line">                p.parent.right = r;       <span class="comment">//p的父节点的右子树为r  </span></div><div class="line">            r.left = p;                   <span class="comment">//p变为r的左子树，即A为B的左子树  </span></div><div class="line">            p.parent = r;                 <span class="comment">//同时更改p的父节点为r，即A的父节点为B  </span></div><div class="line">        &#125;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * <span class="doctag">@param</span> p 最小旋转子树的根节点 </div><div class="line">     * 向右旋转之后，p移到p的右子节点处，p的左子树B变为最小旋转子树的根节点 </div><div class="line">     * B的右子节点变为p的左节点、 </div><div class="line">     * 例如:       A(2)                     B(-1) </div><div class="line">     *            /         右旋转          /    \ </div><div class="line">     *          B(0)       ------&gt;         /     A(0) </div><div class="line">     *         /   \                      /      / </div><div class="line">     *       BL(0) BR(0)                BL(0)  BR(0)  </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">rotateRight</span><span class="params">(Entry&lt;E&gt; p)</span></span>&#123;  </div><div class="line">        System.out.println(<span class="string">"绕"</span>+p.element+<span class="string">"右旋"</span>);  </div><div class="line">        <span class="keyword">if</span>(p!=<span class="keyword">null</span>)&#123;  </div><div class="line">            Entry&lt;E&gt; l = p.left;    </div><div class="line">            p.left = l.right;    <span class="comment">//把B的右节点BR作为A的左节点  </span></div><div class="line">            <span class="keyword">if</span> (l.right != <span class="keyword">null</span>)   <span class="comment">//如果BR不为null，设置BR的父节点为A  </span></div><div class="line">                l.right.parent = p;  </div><div class="line">            l.parent = p.parent;  <span class="comment">//A的父节点赋给B的父节点  </span></div><div class="line">            <span class="keyword">if</span> (p.parent == <span class="keyword">null</span>)   <span class="comment">//如果p是根节点  </span></div><div class="line">                root = l;          <span class="comment">//B为根节点  </span></div><div class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (p.parent.right == p) <span class="comment">//如果A是其父节点的左子节点  </span></div><div class="line">                p.parent.right = l;     <span class="comment">//B为A的父节点的左子树  </span></div><div class="line">            <span class="keyword">else</span>                        <span class="comment">//如果A是其父节点的右子节点  </span></div><div class="line">                p.parent.left = l;      <span class="comment">//B为A的父节点的右子树  </span></div><div class="line">            l.right = p;                <span class="comment">//A为B的右子树  </span></div><div class="line">            p.parent = l;               <span class="comment">//设置A的父节点为B  </span></div><div class="line">        &#125;  </div><div class="line">    &#125;  </div><div class="line">  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 平衡而二叉树的插入操作 </div><div class="line">     * 基本原理为： </div><div class="line">     * 1.首先如同二叉排序树一般，找到其要插入的节点的位置，并把元素插入其中； </div><div class="line">     * 2.自下向上进行回溯，回溯做两个事情： </div><div class="line">     * (1)其一是修改祖先节点的平衡因子，当插入 一个节点时只有根节点到插入节点 </div><div class="line">     * 的路径中的节点的平衡因子会被改变，而且改变的原则是当插入节点在某节点(称为A) </div><div class="line">     * 的左子树 中时，A的平衡因子(称为BF)为BF+1,当插入节点在A的右子树中时A的BF-1， </div><div class="line">     * 而判断插入节点在左子树中还是右子树中只要简单的比较它与A的大小 </div><div class="line">     * (2)在改变祖先节点的平衡因子的同时，找到最近一个平衡因子大于2或小于-2的节点， </div><div class="line">     * 从这个节点开始调整最小不平衡树进行旋转调整，关于如何调整见下文。 </div><div class="line">     * 由于调整后，最小不平衡子树的高度与插入节点前的高度相同，故不需继续要调整祖先节点。 </div><div class="line">     * 这里还有一个特殊情况，如果调整BF时，发现某个节点的BF变为0了，则停止向上继续调整， </div><div class="line">     * 因为这表明此节点中高度小的子树增加了新节点，高度不变，那么祖先节点的BF自然不变。 </div><div class="line">     *  </div><div class="line">     *  </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">add</span><span class="params">(E element)</span></span>&#123;  </div><div class="line">        Entry&lt;E&gt; t = root;  </div><div class="line">        <span class="keyword">if</span>(t == <span class="keyword">null</span>)&#123;  </div><div class="line">            root = <span class="keyword">new</span> Entry&lt;E&gt;(element,<span class="keyword">null</span>);  </div><div class="line">            size = <span class="number">1</span>;  </div><div class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;  </div><div class="line">        &#125;  </div><div class="line">        <span class="keyword">int</span> cmp;  </div><div class="line">        Entry&lt;E&gt; parent;  <span class="comment">//保存t的父节点  </span></div><div class="line">        Comparable&lt;? <span class="keyword">super</span> E&gt; e = (Comparable&lt;? <span class="keyword">super</span> E&gt;) element;  </div><div class="line">        <span class="comment">//从根节点向下搜索，找到插入位置  </span></div><div class="line">        <span class="keyword">do</span> &#123;  </div><div class="line">            parent = t;       </div><div class="line">            cmp = e.compareTo(t.element);  </div><div class="line">            <span class="keyword">if</span>(cmp &lt; <span class="number">0</span>)&#123;  </div><div class="line">                t = t.left;  </div><div class="line">            &#125;<span class="keyword">else</span> <span class="keyword">if</span>(cmp &gt; <span class="number">0</span>)&#123;  </div><div class="line">                t = t.right;  </div><div class="line">            &#125;<span class="keyword">else</span>&#123;  </div><div class="line">                <span class="keyword">return</span> <span class="keyword">false</span>;  </div><div class="line">            &#125;  </div><div class="line">        &#125; <span class="keyword">while</span> (t!=<span class="keyword">null</span>);  </div><div class="line">          </div><div class="line">        Entry&lt;E&gt; child = <span class="keyword">new</span> Entry(element,parent);  </div><div class="line">        <span class="keyword">if</span>(cmp &lt; <span class="number">0</span>)&#123;  </div><div class="line">            parent.left = child;  </div><div class="line">              </div><div class="line">        &#125;<span class="keyword">else</span>&#123;  </div><div class="line">            parent.right = child;     </div><div class="line">        &#125;  </div><div class="line">        <span class="comment">//自下向上回溯，查找最近不平衡节点  </span></div><div class="line">        <span class="keyword">while</span>(parent!=<span class="keyword">null</span>)&#123;  </div><div class="line">            cmp = e.compareTo(parent.element);  </div><div class="line">            <span class="keyword">if</span>(cmp &lt; <span class="number">0</span>)&#123;    <span class="comment">//插入节点在parent的左子树中  </span></div><div class="line">                parent.balance++;  </div><div class="line">            &#125;<span class="keyword">else</span>&#123;           <span class="comment">//插入节点在parent的右子树中  </span></div><div class="line">                parent.balance--;  </div><div class="line">            &#125;  </div><div class="line">            <span class="keyword">if</span>(parent.balance == <span class="number">0</span>)&#123;    <span class="comment">//此节点的balance为0，不再向上调整BF值，且不需要旋转  </span></div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            &#125;  </div><div class="line">            <span class="keyword">if</span>(Math.abs(parent.balance) == <span class="number">2</span>)&#123;  <span class="comment">//找到最小不平衡子树根节点  </span></div><div class="line">                fixAfterInsertion(parent);  </div><div class="line">                <span class="keyword">break</span>;                  <span class="comment">//不用继续向上回溯  </span></div><div class="line">            &#125;  </div><div class="line">            parent = parent.parent;  </div><div class="line">        &#125;  </div><div class="line">        size ++;  </div><div class="line">        <span class="keyword">return</span> <span class="keyword">true</span>;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 调整的方法： </div><div class="line">     * 1.当最小不平衡子树的根(以下简称R)为2时，即左子树高于右子树： </div><div class="line">     * 如果R的左子树的根节点的BF为1时，做右旋； </div><div class="line">     * 如果R的左子树的根节点的BF为-1时，先左旋然后再右旋 </div><div class="line">     *  </div><div class="line">     * 2.R为-2时，即右子树高于左子树： </div><div class="line">     * 如果R的右子树的根节点的BF为1时，先右旋后左旋 </div><div class="line">     * 如果R的右子树的根节点的BF为-1时，做左旋 </div><div class="line">     *  </div><div class="line">     * 至于调整之后，各节点的BF变化见代码 </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">fixAfterInsertion</span><span class="params">(Entry&lt;E&gt; p)</span></span>&#123;  </div><div class="line">        <span class="keyword">if</span>(p.balance == <span class="number">2</span>)&#123;  </div><div class="line">            leftBalance(p);  </div><div class="line">        &#125;  </div><div class="line">        <span class="keyword">if</span>(p.balance == -<span class="number">2</span>)&#123;  </div><div class="line">            rightBalance(p);  </div><div class="line">        &#125;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 做左平衡处理 </div><div class="line">     * 平衡因子的调整如图： </div><div class="line">     *         t                       rd </div><div class="line">     *       /   \                   /    \ </div><div class="line">     *      l    tr   左旋后右旋    l       t </div><div class="line">     *    /   \       -------&gt;    /  \    /  \ </div><div class="line">     *  ll    rd                ll   rdl rdr  tr </div><div class="line">     *       /   \ </div><div class="line">     *     rdl  rdr </div><div class="line">     *      </div><div class="line">     *   情况2(rd的BF为0) </div><div class="line">     *  </div><div class="line">     *    </div><div class="line">     *         t                       rd </div><div class="line">     *       /   \                   /    \ </div><div class="line">     *      l    tr   左旋后右旋    l       t </div><div class="line">     *    /   \       -------&gt;    /  \       \ </div><div class="line">     *  ll    rd                ll   rdl     tr </div><div class="line">     *       /    </div><div class="line">     *     rdl   </div><div class="line">     *      </div><div class="line">     *   情况1(rd的BF为1) </div><div class="line">     *   </div><div class="line">     *    </div><div class="line">     *         t                       rd </div><div class="line">     *       /   \                   /    \ </div><div class="line">     *      l    tr   左旋后右旋    l       t </div><div class="line">     *    /   \       -------&gt;    /       /  \ </div><div class="line">     *  ll    rd                ll       rdr  tr </div><div class="line">     *           \ </div><div class="line">     *          rdr </div><div class="line">     *      </div><div class="line">     *   情况3(rd的BF为-1) </div><div class="line">     *  </div><div class="line">     *    </div><div class="line">     *         t                         l </div><div class="line">     *       /       右旋处理          /    \ </div><div class="line">     *      l        ------&gt;          ll     t </div><div class="line">     *    /   \                             / </div><div class="line">     *   ll   rd                           rd </div><div class="line">     *   情况4(L等高) </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">leftBalance</span><span class="params">(Entry&lt;E&gt; t)</span></span>&#123;  </div><div class="line">        <span class="keyword">boolean</span> heightLower = <span class="keyword">true</span>;  </div><div class="line">        Entry&lt;E&gt; l = t.left;  </div><div class="line">        <span class="keyword">switch</span> (l.balance) &#123;  </div><div class="line">        <span class="keyword">case</span> LH:            <span class="comment">//左高，右旋调整,旋转后树的高度减小  </span></div><div class="line">            t.balance = l.balance = EH;  </div><div class="line">            rotateRight(t);  </div><div class="line">            <span class="keyword">break</span>;   </div><div class="line">        <span class="keyword">case</span> RH:            <span class="comment">//右高，分情况调整                                            </span></div><div class="line">            Entry&lt;E&gt; rd = l.right;  </div><div class="line">            <span class="keyword">switch</span> (rd.balance) &#123;   <span class="comment">//调整各个节点的BF  </span></div><div class="line">            <span class="keyword">case</span> LH:    <span class="comment">//情况1  </span></div><div class="line">                t.balance = RH;  </div><div class="line">                l.balance = EH;  </div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            <span class="keyword">case</span> EH:    <span class="comment">//情况2  </span></div><div class="line">                t.balance = l.balance = EH;  </div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            <span class="keyword">case</span> RH:    <span class="comment">//情况3  </span></div><div class="line">                t.balance = EH;  </div><div class="line">                l.balance = LH;  </div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            &#125;  </div><div class="line">            rd.balance = EH;  </div><div class="line">            rotateLeft(t.left);  </div><div class="line">            rotateRight(t);  </div><div class="line">            <span class="keyword">break</span>;  </div><div class="line">        <span class="keyword">case</span> EH:      <span class="comment">//特殊情况4,这种情况在添加时不可能出现，只在移除时可能出现，旋转之后整体树高不变  </span></div><div class="line">            l.balance = RH;  </div><div class="line">            t.balance = LH;  </div><div class="line">            rotateRight(t);  </div><div class="line">            heightLower = <span class="keyword">false</span>;  </div><div class="line">            <span class="keyword">break</span>;  </div><div class="line">        &#125;  </div><div class="line">        <span class="keyword">return</span> heightLower;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 做右平衡处理 </div><div class="line">     * 平衡因子的调整如图： </div><div class="line">     *           t                               ld </div><div class="line">     *        /     \                          /     \ </div><div class="line">     *      tl       r       先右旋再左旋     t       r </div><div class="line">     *             /   \     --------&gt;      /   \    /  \ </div><div class="line">     *           ld    rr                 tl   ldl  ldr rr </div><div class="line">     *          /  \ </div><div class="line">     *       ldl  ldr </div><div class="line">     *       情况2(ld的BF为0) </div><div class="line">     *        </div><div class="line">     *           t                               ld </div><div class="line">     *        /     \                          /     \ </div><div class="line">     *      tl       r       先右旋再左旋     t       r </div><div class="line">     *             /   \     --------&gt;      /   \       \ </div><div class="line">     *           ld    rr                 tl   ldl      rr </div><div class="line">     *          /   </div><div class="line">     *       ldl   </div><div class="line">     *       情况1(ld的BF为1) </div><div class="line">     *        </div><div class="line">     *           t                               ld </div><div class="line">     *        /     \                          /     \ </div><div class="line">     *      tl       r       先右旋再左旋     t       r </div><div class="line">     *             /   \     --------&gt;      /        /  \ </div><div class="line">     *           ld    rr                 tl        ldr rr </div><div class="line">     *             \ </div><div class="line">     *             ldr </div><div class="line">     *       情况3(ld的BF为-1) </div><div class="line">     *        </div><div class="line">     *           t                                  r </div><div class="line">     *             \          左旋                /   \ </div><div class="line">     *              r        -------&gt;           t      rr      </div><div class="line">     *            /   \                          \ </div><div class="line">     *           ld   rr                         ld </div><div class="line">     *        情况4(r的BF为0)    </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">boolean</span> <span class="title">rightBalance</span><span class="params">(Entry&lt;E&gt; t)</span></span>&#123;  </div><div class="line">        <span class="keyword">boolean</span> heightLower = <span class="keyword">true</span>;  </div><div class="line">        Entry&lt;E&gt; r = t.right;  </div><div class="line">        <span class="keyword">switch</span> (r.balance) &#123;  </div><div class="line">        <span class="keyword">case</span> LH:            <span class="comment">//左高，分情况调整  </span></div><div class="line">            Entry&lt;E&gt; ld = r.left;  </div><div class="line">            <span class="keyword">switch</span> (ld.balance) &#123;   <span class="comment">//调整各个节点的BF  </span></div><div class="line">            <span class="keyword">case</span> LH:    <span class="comment">//情况1  </span></div><div class="line">                t.balance = EH;  </div><div class="line">                r.balance = RH;  </div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            <span class="keyword">case</span> EH:    <span class="comment">//情况2  </span></div><div class="line">                t.balance = r.balance = EH;  </div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            <span class="keyword">case</span> RH:    <span class="comment">//情况3  </span></div><div class="line">                t.balance = LH;  </div><div class="line">                r.balance = EH;  </div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            &#125;  </div><div class="line">            ld.balance = EH;  </div><div class="line">            rotateRight(t.right);  </div><div class="line">            rotateLeft(t);  </div><div class="line">            <span class="keyword">break</span>;  </div><div class="line">        <span class="keyword">case</span> RH:            <span class="comment">//右高，左旋调整  </span></div><div class="line">            t.balance = r.balance = EH;  </div><div class="line">            rotateLeft(t);  </div><div class="line">            <span class="keyword">break</span>;  </div><div class="line">        <span class="keyword">case</span> EH:       <span class="comment">//特殊情况4  </span></div><div class="line">            r.balance = LH;  </div><div class="line">            t.balance = RH;  </div><div class="line">            rotateLeft(t);  </div><div class="line">            heightLower = <span class="keyword">false</span>;  </div><div class="line">            <span class="keyword">break</span>;  </div><div class="line">        &#125;  </div><div class="line">        <span class="keyword">return</span> heightLower;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 查找指定元素，如果找到返回其Entry对象，否则返回null </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">private</span> Entry&lt;E&gt; <span class="title">getEntry</span><span class="params">(Object element)</span> </span>&#123;    </div><div class="line">        Entry&lt;E&gt; tmp = root;    </div><div class="line">        Comparable&lt;? <span class="keyword">super</span> E&gt; e = (Comparable&lt;? <span class="keyword">super</span> E&gt;) element;  </div><div class="line">        <span class="keyword">int</span> c;    </div><div class="line">        <span class="keyword">while</span> (tmp != <span class="keyword">null</span>) &#123;    </div><div class="line">            c = e.compareTo(tmp.element);    </div><div class="line">            <span class="keyword">if</span> (c == <span class="number">0</span>) &#123;    </div><div class="line">                <span class="keyword">return</span> tmp;    </div><div class="line">            &#125; <span class="keyword">else</span> <span class="keyword">if</span> (c &lt; <span class="number">0</span>) &#123;    </div><div class="line">                tmp = tmp.left;    </div><div class="line">            &#125; <span class="keyword">else</span> &#123;    </div><div class="line">                tmp = tmp.right;    </div><div class="line">            &#125;    </div><div class="line">        &#125;    </div><div class="line">        <span class="keyword">return</span> <span class="keyword">null</span>;    </div><div class="line">    &#125;    </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 平衡二叉树的移除元素操作 </div><div class="line">     *  </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">remove</span><span class="params">(Object o)</span></span>&#123;  </div><div class="line">        Entry&lt;E&gt; e = getEntry(o);  </div><div class="line">        <span class="keyword">if</span>(e!=<span class="keyword">null</span>)&#123;  </div><div class="line">            deleteEntry(e);  </div><div class="line">            <span class="keyword">return</span> <span class="keyword">true</span>;  </div><div class="line">        &#125;  </div><div class="line">        <span class="keyword">return</span> <span class="keyword">false</span>;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">deleteEntry</span><span class="params">(Entry&lt;E&gt; p)</span></span>&#123;  </div><div class="line">        size --;  </div><div class="line">        <span class="comment">//如果p左右子树都不为空，找到其直接后继，替换p，之后p指向s，删除p其实是删除s  </span></div><div class="line">        <span class="comment">//所有的删除左右子树不为空的节点都可以调整为删除左右子树有其一不为空，或都为空的情况。  </span></div><div class="line">        <span class="keyword">if</span> (p.left != <span class="keyword">null</span> &amp;&amp; p.right != <span class="keyword">null</span>) &#123;  </div><div class="line">             Entry&lt;E&gt; s = successor(p);  </div><div class="line">             p.element = s.element;  </div><div class="line">             p = s;  </div><div class="line">        &#125;  </div><div class="line">        Entry&lt;E&gt; replacement = (p.left != <span class="keyword">null</span> ? p.left : p.right);  </div><div class="line">  </div><div class="line">        <span class="keyword">if</span> (replacement != <span class="keyword">null</span>) &#123;      <span class="comment">//如果其左右子树有其一不为空  </span></div><div class="line">            replacement.parent = p.parent;  </div><div class="line">            <span class="keyword">if</span> (p.parent == <span class="keyword">null</span>)   <span class="comment">//如果p为root节点  </span></div><div class="line">                root = replacement;  </div><div class="line">            <span class="keyword">else</span> <span class="keyword">if</span> (p == p.parent.left)    <span class="comment">//如果p是左孩子  </span></div><div class="line">                p.parent.left  = replacement;     </div><div class="line">            <span class="keyword">else</span>                            <span class="comment">//如果p是右孩子  </span></div><div class="line">                p.parent.right = replacement;  </div><div class="line">  </div><div class="line">            p.left = p.right = p.parent = <span class="keyword">null</span>;     <span class="comment">//p的指针清空  </span></div><div class="line">              </div><div class="line">            <span class="comment">//这里更改了replacement的父节点，所以可以直接从它开始向上回溯  </span></div><div class="line">            fixAfterDeletion(replacement);    </div><div class="line">  </div><div class="line">        &#125; <span class="keyword">else</span> <span class="keyword">if</span> (p.parent == <span class="keyword">null</span>) &#123; <span class="comment">// 如果全树只有一个节点  </span></div><div class="line">            root = <span class="keyword">null</span>;  </div><div class="line">        &#125; <span class="keyword">else</span> &#123;  <span class="comment">//左右子树都为空  </span></div><div class="line">            fixAfterDeletion(p);    <span class="comment">//这里从p开始回溯  </span></div><div class="line">            <span class="keyword">if</span> (p.parent != <span class="keyword">null</span>) &#123;  </div><div class="line">                <span class="keyword">if</span> (p == p.parent.left)  </div><div class="line">                    p.parent.left = <span class="keyword">null</span>;  </div><div class="line">                <span class="keyword">else</span> <span class="keyword">if</span> (p == p.parent.right)  </div><div class="line">                    p.parent.right = <span class="keyword">null</span>;  </div><div class="line">                p.parent = <span class="keyword">null</span>;  </div><div class="line">            &#125;  </div><div class="line">        &#125;     </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 返回以中序遍历方式遍历树时，t的直接后继 </div><div class="line">     */  </div><div class="line">    <span class="keyword">static</span> &lt;E&gt; <span class="function">Entry&lt;E&gt; <span class="title">successor</span><span class="params">(Entry&lt;E&gt; t)</span> </span>&#123;  </div><div class="line">        <span class="keyword">if</span> (t == <span class="keyword">null</span>)  </div><div class="line">            <span class="keyword">return</span> <span class="keyword">null</span>;  </div><div class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (t.right != <span class="keyword">null</span>) &#123; <span class="comment">//往右，然后向左直到尽头  </span></div><div class="line">            Entry&lt;E&gt; p = t.right;  </div><div class="line">            <span class="keyword">while</span> (p.left != <span class="keyword">null</span>)  </div><div class="line">                p = p.left;  </div><div class="line">            <span class="keyword">return</span> p;  </div><div class="line">        &#125; <span class="keyword">else</span> &#123;        <span class="comment">//right为空，如果t是p的左子树，则p为t的直接后继  </span></div><div class="line">            Entry&lt;E&gt; p = t.parent;  </div><div class="line">            Entry&lt;E&gt; ch = t;  </div><div class="line">            <span class="keyword">while</span> (p != <span class="keyword">null</span> &amp;&amp; ch == p.right) &#123;    <span class="comment">//如果t是p的右子树，则继续向上搜索其直接后继  </span></div><div class="line">                ch = p;  </div><div class="line">                p = p.parent;  </div><div class="line">            &#125;  </div><div class="line">            <span class="keyword">return</span> p;  </div><div class="line">        &#125;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 删除某节点p后的调整方法： </div><div class="line">     * 1.从p开始向上回溯，修改祖先的BF值，这里只要调整从p的父节点到根节点的BF值， </div><div class="line">     * 调整原则为，当p位于某祖先节点(简称A)的左子树中时，A的BF减1，当p位于A的 </div><div class="line">     * 右子树中时A的BF加1。当某个祖先节点BF变为1或-1时停止回溯，这里与插入是相反的， </div><div class="line">     * 因为原本这个节点是平衡的，删除它的子树的某个节点并不会改变它的高度 </div><div class="line">     *  </div><div class="line">     * 2.检查每个节点的BF值，如果为2或-2需要进行旋转调整，调整方法如下文， </div><div class="line">     * 如果调整之后这个最小子树的高度降低了，那么必须继续从这个最小子树的根节点(假设为B)继续 </div><div class="line">     * 向上回溯，这里和插入不一样，因为B的父节点的平衡性因为其子树B的高度的改变而发生了改变， </div><div class="line">     * 那么就可能需要调整，所以删除可能进行多次的调整。 </div><div class="line">     *  </div><div class="line">     */  </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">fixAfterDeletion</span><span class="params">(Entry&lt;E&gt; p)</span></span>&#123;  </div><div class="line">        <span class="keyword">boolean</span> heightLower = <span class="keyword">true</span>;     <span class="comment">//看最小子树调整后，它的高度是否发生变化，如果减小，继续回溯  </span></div><div class="line">        Entry&lt;E&gt; t = p.parent;  </div><div class="line">        Comparable&lt;? <span class="keyword">super</span> E&gt; e = (Comparable&lt;? <span class="keyword">super</span> E&gt;)p.element;  </div><div class="line">        <span class="keyword">int</span> cmp;  </div><div class="line">        <span class="comment">//自下向上回溯，查找不平衡的节点进行调整  </span></div><div class="line">        <span class="keyword">while</span>(t!=<span class="keyword">null</span> &amp;&amp; heightLower)&#123;  </div><div class="line">            cmp = e.compareTo(t.element);  </div><div class="line">            <span class="comment">/** </span></div><div class="line">             * 删除的节点是右子树，等于的话，必然是删除的某个节点的左右子树不为空的情况 </div><div class="line">             * 例如：     10 </div><div class="line">             *          /    \ </div><div class="line">             *         5     15 </div><div class="line">             *       /   \ </div><div class="line">             *      3    6  </div><div class="line">             * 这里删除5，是把6的值赋给5，然后删除6，这里6是p，p的父节点的值也是6。 </div><div class="line">             * 而这也是右子树的一种 </div><div class="line">             */   </div><div class="line">            <span class="keyword">if</span>(cmp &gt;= <span class="number">0</span> )&#123;     </div><div class="line">                t.balance ++;  </div><div class="line">            &#125;<span class="keyword">else</span>&#123;  </div><div class="line">                t.balance --;  </div><div class="line">            &#125;  </div><div class="line">            <span class="keyword">if</span>(Math.abs(t.balance) == <span class="number">1</span>)&#123;   <span class="comment">//父节点经过调整平衡因子后，如果为1或-1，说明调整之前是0，停止回溯。  </span></div><div class="line">                <span class="keyword">break</span>;  </div><div class="line">            &#125;  </div><div class="line">            Entry&lt;E&gt; r = t;  </div><div class="line">            <span class="comment">//这里的调整跟插入一样  </span></div><div class="line">            <span class="keyword">if</span>(t.balance == <span class="number">2</span>)&#123;  </div><div class="line">                heightLower = leftBalance(r);  </div><div class="line">            &#125;<span class="keyword">else</span> <span class="keyword">if</span>(t.balance==-<span class="number">2</span>)&#123;  </div><div class="line">                heightLower = rightBalance(r);  </div><div class="line">            &#125;  </div><div class="line">            t = t.parent;  </div><div class="line">        &#125;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">      </div><div class="line">      </div><div class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> LH = <span class="number">1</span>;    <span class="comment">//左高  </span></div><div class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> EH = <span class="number">0</span>;    <span class="comment">//等高  </span></div><div class="line">    <span class="keyword">private</span> <span class="keyword">static</span> <span class="keyword">final</span> <span class="keyword">int</span> RH = -<span class="number">1</span>;   <span class="comment">//右高  </span></div><div class="line">      </div><div class="line">    <span class="comment">/** </span></div><div class="line">     * 树节点，为方便起见不写get，Set方法 </div><div class="line">     */  </div><div class="line">    <span class="keyword">static</span> <span class="class"><span class="keyword">class</span> <span class="title">Entry</span>&lt;<span class="title">E</span>&gt;</span>&#123;  </div><div class="line">        E element;  </div><div class="line">        Entry&lt;E&gt; parent;  </div><div class="line">        Entry&lt;E&gt; left;  </div><div class="line">        Entry&lt;E&gt; right;  </div><div class="line">        <span class="keyword">int</span> balance = EH;   <span class="comment">//平衡因子，只能为1或0或-1  </span></div><div class="line">          </div><div class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Entry</span><span class="params">(E element,Entry&lt;E&gt; parent)</span></span>&#123;  </div><div class="line">            <span class="keyword">this</span>.element = element;  </div><div class="line">            <span class="keyword">this</span>.parent = parent;  </div><div class="line">        &#125;  </div><div class="line">          </div><div class="line">        <span class="function"><span class="keyword">public</span> <span class="title">Entry</span><span class="params">()</span></span>&#123;&#125;  </div><div class="line">  </div><div class="line">        <span class="meta">@Override</span>  </div><div class="line">        <span class="function"><span class="keyword">public</span> String <span class="title">toString</span><span class="params">()</span> </span>&#123;  </div><div class="line">            <span class="keyword">return</span> element+<span class="string">" BF="</span>+balance;  </div><div class="line">        &#125;  </div><div class="line">              </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">      </div><div class="line">    <span class="comment">//返回中序遍历此树的迭代器,返回的是一个有序列表  </span></div><div class="line">    <span class="keyword">private</span> <span class="class"><span class="keyword">class</span> <span class="title">BinarySortIterator</span> <span class="keyword">implements</span> <span class="title">Iterator</span>&lt;<span class="title">E</span>&gt;</span>&#123;  </div><div class="line">        Entry&lt;E&gt; next;  </div><div class="line">        Entry&lt;E&gt; lastReturned;  </div><div class="line">          </div><div class="line">        <span class="function"><span class="keyword">public</span> <span class="title">BinarySortIterator</span><span class="params">()</span></span>&#123;  </div><div class="line">            Entry&lt;E&gt; s = root;  </div><div class="line">            <span class="keyword">if</span>(s !=<span class="keyword">null</span>)&#123;  </div><div class="line">                <span class="keyword">while</span>(s.left != <span class="keyword">null</span>)&#123;  <span class="comment">//找到中序遍历的第一个元素  </span></div><div class="line">                    s = s.left;  </div><div class="line">                &#125;  </div><div class="line">            &#125;  </div><div class="line">            next = s;   <span class="comment">//赋给next  </span></div><div class="line">        &#125;  </div><div class="line">          </div><div class="line">        <span class="meta">@Override</span>  </div><div class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">hasNext</span><span class="params">()</span> </span>&#123;  </div><div class="line">            <span class="keyword">return</span> next!=<span class="keyword">null</span>;  </div><div class="line">        &#125;  </div><div class="line">  </div><div class="line">        <span class="meta">@Override</span>  </div><div class="line">        <span class="function"><span class="keyword">public</span> E <span class="title">next</span><span class="params">()</span> </span>&#123;  </div><div class="line">            Entry&lt;E&gt; e = next;  </div><div class="line">            <span class="keyword">if</span> (e == <span class="keyword">null</span>)  </div><div class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> NoSuchElementException();  </div><div class="line">            next = successor(e);  </div><div class="line">            lastReturned = e;  </div><div class="line">            <span class="keyword">return</span> e.element;  </div><div class="line">        &#125;  </div><div class="line">  </div><div class="line">        <span class="meta">@Override</span>  </div><div class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">remove</span><span class="params">()</span> </span>&#123;  </div><div class="line">            <span class="keyword">if</span> (lastReturned == <span class="keyword">null</span>)  </div><div class="line">                <span class="keyword">throw</span> <span class="keyword">new</span> IllegalStateException();  </div><div class="line">            <span class="comment">// deleted entries are replaced by their successors  </span></div><div class="line">            <span class="keyword">if</span> (lastReturned.left != <span class="keyword">null</span> &amp;&amp; lastReturned.right != <span class="keyword">null</span>)  </div><div class="line">                next = lastReturned;  </div><div class="line">            deleteEntry(lastReturned);  </div><div class="line">            lastReturned = <span class="keyword">null</span>;  </div><div class="line">        &#125;  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">    <span class="function"><span class="keyword">public</span> Iterator&lt;E&gt; <span class="title">itrator</span><span class="params">()</span></span>&#123;  </div><div class="line">        <span class="keyword">return</span> <span class="keyword">new</span> BinarySortIterator();  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">  </div><div class="line">      </div><div class="line">    <span class="function"><span class="keyword">private</span> <span class="keyword">int</span> <span class="title">treeHeight</span><span class="params">(Entry&lt;E&gt; p)</span></span>&#123;  </div><div class="line">        <span class="keyword">if</span>(p == <span class="keyword">null</span>)&#123;  </div><div class="line">            <span class="keyword">return</span> -<span class="number">1</span>;  </div><div class="line">        &#125;  </div><div class="line">        <span class="keyword">return</span> <span class="number">1</span> + Math.max(treeHeight(p.left), treeHeight(p.right));  </div><div class="line">    &#125;  </div><div class="line">      </div><div class="line">      </div><div class="line">    <span class="comment">//测试，你也可以任意测试  </span></div><div class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;  </div><div class="line">        AVLTree&lt;Integer&gt; tree = <span class="keyword">new</span> AVLTree&lt;Integer&gt;();  </div><div class="line">        System.out.println(<span class="string">"------添加------"</span>);  </div><div class="line">        tree.add(<span class="number">50</span>);  </div><div class="line">        System.out.print(<span class="number">50</span>+<span class="string">" "</span>);  </div><div class="line">        tree.add(<span class="number">66</span>);  </div><div class="line">        System.out.print(<span class="number">66</span>+<span class="string">" "</span>);  </div><div class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;<span class="number">10</span>;i++)&#123;  </div><div class="line">            <span class="keyword">int</span> ran = (<span class="keyword">int</span>)(Math.random() * <span class="number">100</span>);  </div><div class="line">            System.out.print(ran+<span class="string">" "</span>);  </div><div class="line">            tree.add(ran);  </div><div class="line">        &#125;  </div><div class="line">        System.out.println(<span class="string">"------删除------"</span>);  </div><div class="line">        tree.remove(<span class="number">50</span>);  </div><div class="line">        tree.remove(<span class="number">66</span>);  </div><div class="line">          </div><div class="line">        System.out.println();  </div><div class="line">        Iterator&lt;Integer&gt; it = tree.itrator();  </div><div class="line">        <span class="keyword">while</span>(it.hasNext())&#123;  </div><div class="line">            System.out.print(it.next()+<span class="string">" "</span>);  </div><div class="line">        &#125;  </div><div class="line">    &#125;  </div><div class="line">&#125;</div></pre></td></tr></table></figure>
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <div>
+      
+        
+
+      
+    </div>
+
+    <footer class="post-footer">
+      
+        <div class="post-tags">
+          
+            <a href="/tags/数据结构与算法/" rel="tag"># 数据结构与算法</a>
+          
+            <a href="/tags/tree/" rel="tag"># tree</a>
+          
+        </div>
+      
+
+      
+        
+      
+
+      
+        <div class="post-nav">
+          <div class="post-nav-next post-nav-item">
+            
+          </div>
+
+          <span class="post-nav-divider"></span>
+
+          <div class="post-nav-prev post-nav-item">
+            
+              <a href="/20170522/sitemesh_404/" rel="prev" title="让Sitemesh3支持渲染错误页面">
+                让Sitemesh3支持渲染错误页面 <i class="fa fa-chevron-right"></i>
+              </a>
+            
+          </div>
+        </div>
+      
+
+      
+      
+    </footer>
+  </article>
+
+
+
+    <div class="post-spread">
+      
+        
+<script>
+  with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='//bdimg.share.baidu.com/static/api/js/share.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+
+      
+    </div>
+  </div>
+
+
+          </div>
+          
+
+
+          
+  <div class="comments" id="comments">
+    
+      <div id="cloud-tie-wrapper" class="cloud-tie-wrapper"></div>
+    
+  </div>
+
+
+        </div>
+        
+          
+  
+  <div class="sidebar-toggle">
+    <div class="sidebar-toggle-line-wrap">
+      <span class="sidebar-toggle-line sidebar-toggle-line-first"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-middle"></span>
+      <span class="sidebar-toggle-line sidebar-toggle-line-last"></span>
+    </div>
+  </div>
+
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+
+      
+
+      
+
+      <section class="site-overview sidebar-panel sidebar-panel-active">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+          <img class="site-author-image" itemprop="image"
+               src="/images/face.jpg"
+               alt="曙光" />
+          <p class="site-author-name" itemprop="name">曙光</p>
+           
+              <p class="site-description motion-element" itemprop="description"></p>
+          
+        </div>
+        <nav class="site-state motion-element">
+
+          
+            <div class="site-state-item site-state-posts">
+              <a href="/archives">
+                <span class="site-state-item-count">31</span>
+                <span class="site-state-item-name">日志</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-categories">
+              <a href="/categories/index.html">
+                <span class="site-state-item-count">10</span>
+                <span class="site-state-item-name">分类</span>
+              </a>
+            </div>
+          
+
+          
+            
+            
+            <div class="site-state-item site-state-tags">
+              <a href="/tags/index.html">
+                <span class="site-state-item-count">48</span>
+                <span class="site-state-item-name">标签</span>
+              </a>
+            </div>
+          
+
+        </nav>
+
+        
+          <div class="feed-link motion-element">
+            <a href="/atom.xml" rel="alternate">
+              <i class="fa fa-rss"></i>
+              RSS
+            </a>
+          </div>
+        
+
+        <div class="links-of-author motion-element">
+          
+            
+              <span class="links-of-author-item">
+                <a rel="external nofollow" href="https://github.com/zhaoshg" target="_blank" title="GitHub">
+                  
+                    <i class="fa fa-fw fa-github"></i>
+                  
+                  GitHub
+                </a>
+              </span>
+            
+          
+        </div>
+
+        
+        
+
+        
+        
+          <div class="links-of-blogroll motion-element links-of-blogroll-inline">
+            <div class="links-of-blogroll-title">
+              <i class="fa  fa-fw fa-globe"></i>
+              友情链接
+            </div>
+            <ul class="links-of-blogroll-list">
+              
+                <li class="links-of-blogroll-item">
+                  <a rel="external nofollow" href="http://www.nongrj.com/" title="农仁街" target="_blank">农仁街</a>
+                </li>
+              
+            </ul>
+          </div>
+        
+
+        
+
+
+      </section>
+
+      
+
+      
+
+    </div>
+  </aside>
+
+
+        
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="footer-inner">
+        <div class="copyright" align="center">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2017</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">曙光</span>
+</div>
+<!--
+
+<div class="powered-by">
+  由 <a rel="external nofollow" class="theme-link" href="https://hexo.io">Hexo</a> 强力驱动
+</div>
+
+<div class="theme-info">
+  主题 -
+  <a rel="external nofollow" class="theme-link" href="https://github.com/iissnan/hexo-theme-next">
+    NexT.Mist
+  </a>
+</div>
+
+-->
+
+
+        
+
+        
+      </div>
+    </footer>
+
+    
+      <div class="back-to-top">
+        <i class="fa fa-arrow-up"></i>
+        
+      </div>
+    
+
+  </div>
+
+  
+
+<script type="text/javascript">
+  if (Object.prototype.toString.call(window.Promise) !== '[object Function]') {
+    window.Promise = null;
+  }
+</script>
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery/2.1.3/jquery.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fastclick/1.0.6/fastclick.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/jquery.lazyload/1.9.3/jquery.lazyload.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/velocity/1.2.3/velocity.ui.min.js"></script>
+
+  
+  <script type="text/javascript" src="//cdn.jsdelivr.net/fancybox/2.1.5/jquery.fancybox.pack.js"></script>
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/utils.js?v=5.1.0"></script>
+
+  <script type="text/javascript" src="/js/src/motion.js?v=5.1.0"></script>
+
+
+
+  
+  
+
+  
+  <script type="text/javascript" src="/js/src/scrollspy.js?v=5.1.0"></script>
+<script type="text/javascript" src="/js/src/post-details.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  <script type="text/javascript" src="/js/src/bootstrap.js?v=5.1.0"></script>
+
+
+
+  
+
+
+  
+
+
+
+
+	
+
+
+
+
+
+  
+    
+    <script>
+      var cloudTieConfig = {
+        url: document.location.href, 
+        sourceId: "",
+        productKey: "66baac132d9b4e38acd9a0a664710c6f",
+        target: "cloud-tie-wrapper"
+      };
+    </script>
+    <script src="https://img1.ws.126.net/f2e/tie/yun/sdk/loader.js"></script>
+  
+
+
+
+
+
+
+
+
+
+
+  
+
+  <script type="text/javascript">
+    // Popup Window;
+    var isfetched = false;
+    // Search DB path;
+    var search_path = "search.xml";
+    if (search_path.length == 0) {
+      search_path = "search.xml";
+    }
+    var path = "/" + search_path;
+    // monitor main search box;
+
+    function proceedsearch() {
+      $("body")
+        .append('<div class="search-popup-overlay local-search-pop-overlay"></div>')
+        .css('overflow', 'hidden');
+      $('.popup').toggle();
+    }
+    // search function;
+    var searchFunc = function(path, search_id, content_id) {
+      'use strict';
+      $.ajax({
+        url: path,
+        dataType: "xml",
+        async: true,
+        success: function( xmlResponse ) {
+          // get the contents from search data
+          isfetched = true;
+          $('.popup').detach().appendTo('.header-inner');
+          var datas = $( "entry", xmlResponse ).map(function() {
+            return {
+              title: $( "title", this ).text(),
+              content: $("content",this).text(),
+              url: $( "url" , this).text()
+            };
+          }).get();
+          var $input = document.getElementById(search_id);
+          var $resultContent = document.getElementById(content_id);
+          $input.addEventListener('input', function(){
+            var matchcounts = 0;
+            var str='<ul class=\"search-result-list\">';
+            var keywords = this.value.trim().toLowerCase().split(/[\s\-]+/);
+            $resultContent.innerHTML = "";
+            if (this.value.trim().length > 1) {
+              // perform local searching
+              datas.forEach(function(data) {
+                var isMatch = false;
+                var content_index = [];
+                var data_title = data.title.trim().toLowerCase();
+                var data_content = data.content.trim().replace(/<[^>]+>/g,"").toLowerCase();
+                var data_url = decodeURIComponent(data.url);
+                var index_title = -1;
+                var index_content = -1;
+                var first_occur = -1;
+                // only match artiles with not empty titles and contents
+                if(data_title != '') {
+                  keywords.forEach(function(keyword, i) {
+                    index_title = data_title.indexOf(keyword);
+                    index_content = data_content.indexOf(keyword);
+                    if( index_title >= 0 || index_content >= 0 ){
+                      isMatch = true;
+                      if (i == 0) {
+                        first_occur = index_content;
+                      }
+                    }
+
+                  });
+                }
+                // show search results
+                if (isMatch) {
+                  matchcounts += 1;
+                  str += "<li><a href='"+ data_url +"' class='search-result-title'>"+ data_title +"</a>";
+                  var content = data.content.trim().replace(/<[^>]+>/g,"");
+                  if (first_occur >= 0) {
+                    // cut out 100 characters
+                    var start = first_occur - 20;
+                    var end = first_occur + 80;
+                    if(start < 0){
+                      start = 0;
+                    }
+                    if(start == 0){
+                      end = 50;
+                    }
+                    if(end > content.length){
+                      end = content.length;
+                    }
+                    var match_content = content.substring(start, end);
+                    // highlight all keywords
+                    keywords.forEach(function(keyword){
+                      var regS = new RegExp(keyword, "gi");
+                      match_content = match_content.replace(regS, "<b class=\"search-keyword\">"+keyword+"</b>");
+                    });
+
+                    str += "<p class=\"search-result\">" + match_content +"...</p>"
+                  }
+                  str += "</li>";
+                }
+              })};
+            str += "</ul>";
+            if (matchcounts == 0) { str = '<div id="no-result"><i class="fa fa-frown-o fa-5x" /></div>' }
+            if (keywords == "") { str = '<div id="no-result"><i class="fa fa-search fa-5x" /></div>' }
+            $resultContent.innerHTML = str;
+          });
+          proceedsearch();
+        }
+      });}
+
+    // handle and trigger popup window;
+    $('.popup-trigger').click(function(e) {
+      e.stopPropagation();
+      if (isfetched == false) {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      } else {
+        proceedsearch();
+      };
+    });
+
+    $('.popup-btn-close').click(function(e){
+      $('.popup').hide();
+      $(".local-search-pop-overlay").remove();
+      $('body').css('overflow', '');
+    });
+    $('.popup').click(function(e){
+      e.stopPropagation();
+    });
+  </script>
+
+
+
+
+
+  
+
+  
+  <script src="https://cdn1.lncld.net/static/js/av-core-mini-0.6.1.js"></script>
+  <script>AV.initialize("HofnnMS813HyOHPUrN3wmNkQ-gzGzoHsz", "mL2pwohDw3hUOwrR9jaBs553");</script>
+  <script>
+    function showTime(Counter) {
+      var query = new AV.Query(Counter);
+      var entries = [];
+      var $visitors = $(".leancloud_visitors");
+
+      $visitors.each(function () {
+        entries.push( $(this).attr("id").trim() );
+      });
+
+      query.containedIn('url', entries);
+      query.find()
+        .done(function (results) {
+          var COUNT_CONTAINER_REF = '.leancloud-visitors-count';
+
+          if (results.length === 0) {
+            $visitors.find(COUNT_CONTAINER_REF).text(0);
+            return;
+          }
+
+          for (var i = 0; i < results.length; i++) {
+            var item = results[i];
+            var url = item.get('url');
+            var time = item.get('time');
+            var element = document.getElementById(url);
+
+            $(element).find(COUNT_CONTAINER_REF).text(time);
+          }
+          for(var i = 0; i < entries.length; i++) {
+            var url = entries[i];
+            var element = document.getElementById(url);
+            var countSpan = $(element).find(COUNT_CONTAINER_REF);
+            if( countSpan.text() == '') {
+              countSpan.text(0);
+            }
+          }
+        })
+        .fail(function (object, error) {
+          console.log("Error: " + error.code + " " + error.message);
+        });
+    }
+
+    function addCount(Counter) {
+      var $visitors = $(".leancloud_visitors");
+      var url = $visitors.attr('id').trim();
+      var title = $visitors.attr('data-flag-title').trim();
+      var query = new AV.Query(Counter);
+
+      query.equalTo("url", url);
+      query.find({
+        success: function(results) {
+          if (results.length > 0) {
+            var counter = results[0];
+            counter.fetchWhenSave(true);
+            counter.increment("time");
+            counter.save(null, {
+              success: function(counter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(counter.get('time'));
+              },
+              error: function(counter, error) {
+                console.log('Failed to save Visitor num, with error message: ' + error.message);
+              }
+            });
+          } else {
+            var newcounter = new Counter();
+            /* Set ACL */
+            var acl = new AV.ACL();
+            acl.setPublicReadAccess(true);
+            acl.setPublicWriteAccess(true);
+            newcounter.setACL(acl);
+            /* End Set ACL */
+            newcounter.set("title", title);
+            newcounter.set("url", url);
+            newcounter.set("time", 1);
+            newcounter.save(null, {
+              success: function(newcounter) {
+                var $element = $(document.getElementById(url));
+                $element.find('.leancloud-visitors-count').text(newcounter.get('time'));
+              },
+              error: function(newcounter, error) {
+                console.log('Failed to create');
+              }
+            });
+          }
+        },
+        error: function(error) {
+          console.log('Error:' + error.code + " " + error.message);
+        }
+      });
+    }
+
+    $(function() {
+      var Counter = AV.Object.extend("Counter");
+      if ($('.leancloud_visitors').length == 1) {
+        addCount(Counter);
+      } else if ($('.post-title-link').length > 1) {
+        showTime(Counter);
+      }
+    });
+  </script>
+
+
+
+  
+<script>
+(function(){
+    var bp = document.createElement('script');
+    var curProtocol = window.location.protocol.split(':')[0];
+    if (curProtocol === 'https') {
+        bp.src = 'https://zz.bdstatic.com/linksubmit/push.js';        
+    }
+    else {
+        bp.src = 'http://push.zhanzhang.baidu.com/push.js';
+    }
+    var s = document.getElementsByTagName("script")[0];
+    s.parentNode.insertBefore(bp, s);
+})();
+</script>
+
+
+  
+  
+
+
+  
+
+  
+
+</body>
+</html>
