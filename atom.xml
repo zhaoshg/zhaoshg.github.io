@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://www.javacn.top/"/>
-  <updated>2017-07-17T10:24:13.743Z</updated>
+  <updated>2017-07-17T10:29:25.477Z</updated>
   <id>http://www.javacn.top/</id>
   
   <author>
@@ -20,7 +20,7 @@
     <link href="http://www.javacn.top/20170717/UML_3diagrame/"/>
     <id>http://www.javacn.top/20170717/UML_3diagrame/</id>
     <published>2017-07-17T08:10:06.000Z</published>
-    <updated>2017-07-17T10:24:13.743Z</updated>
+    <updated>2017-07-17T10:29:25.477Z</updated>
     
     <content type="html"><![CDATA[<h1 id="用例图"><a href="#用例图" class="headerlink" title="用例图"></a>用例图</h1><p>##作用<br>对系统的使用方式分类.</p>
 <h2 id="用例图画法"><a href="#用例图画法" class="headerlink" title="用例图画法"></a>用例图画法</h2><ol>
@@ -115,8 +115,7 @@
 </tr>
 </tbody>
 </table>
-<p>#活动图</p>
-<p>##作用<br>显示人或对象的活动，其方式类似于流程图。<br>活动图有一种叫做泳道图，能够清晰体现出某个动作发生在哪个部门或者说此动作发生在哪个模块，是经常被使用的一种UML图。</p>
+<h1 id="活动图"><a href="#活动图" class="headerlink" title="活动图"></a>活动图</h1><h2 id="作用"><a href="#作用" class="headerlink" title="作用"></a>作用</h2><p>显示人或对象的活动，其方式类似于流程图。<br>活动图有一种叫做泳道图，能够清晰体现出某个动作发生在哪个部门或者说此动作发生在哪个模块，是经常被使用的一种UML图。</p>
 <h2 id="画法"><a href="#画法" class="headerlink" title="画法"></a>画法</h2><p><img src="http://op06ugvox.bkt.clouddn.com/hexo/UML%E7%9A%8413%E7%A7%8D%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%9B%BE%E5%8F%8A%E4%BD%9C%E7%94%A8/1.png" alt=""></p>
 <ul>
 <li>选中右侧菜单栏中的model，点击“New Model from Pattern”按钮。弹出选择模型窗口。此时选中“Business Process”模型。<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/UML%E7%9A%8413%E7%A7%8D%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%9B%BE%E5%8F%8A%E4%BD%9C%E7%94%A8/2.png" alt=""></li>
@@ -128,24 +127,15 @@
 <li>泳道图画完后，一定要注意需要保存。保存完成后，可以点击菜单栏中的“编辑”-&gt;“复制”,此时可以将图复制到你需要的文档了。进入你的文档，只需要使用“Ctrl+C”，粘贴一下就可以了！<br><img src="http://op06ugvox.bkt.clouddn.com/hexo/UML%E7%9A%8413%E7%A7%8D%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%9B%BE%E5%8F%8A%E4%BD%9C%E7%94%A8/10.png" alt=""></li>
 <li></li>
 </ul>
-<p>#状态机图</p>
-<p>##作用<br>显示生命周期比较有趣或复杂的对象的各种状态。</p>
-<p>#通信图</p>
-<p>##作用<br>显示在某种情形下对象之间发送的消息。</p>
-<p>#顺序图</p>
-<p>##作用<br>显示与通信图类以的信息，但强调的是顺序，而不是连接。</p>
-<p>#包图</p>
-<p>##作用<br>显示相关的类如何组合，对开发人员有用。</p>
-<p>#部署图</p>
-<p>##作用<br>显示安装已完成系统的机器、过程和部署制品。</p>
-<p>#组件图</p>
-<p>##作用<br>显示可重用的组件（对象或子系统）及期接口。</p>
-<p>#交互总图</p>
-<p>##作用<br>使用顺序图喧赤活动的务个步骤。</p>
-<p>#时间图</p>
-<p>##作用<br>显示消息和对象状态的准确时间限制。</p>
-<p>#复合结构图</p>
-<p>##作用<br>显示对象在聚合或复合中的相互关系，显示接口和协作的对象</p>
+<h1 id="状态机图"><a href="#状态机图" class="headerlink" title="状态机图"></a>状态机图</h1><h2 id="作用-1"><a href="#作用-1" class="headerlink" title="作用"></a>作用</h2><p>显示生命周期比较有趣或复杂的对象的各种状态。</p>
+<h1 id="通信图"><a href="#通信图" class="headerlink" title="通信图"></a>通信图</h1><h2 id="作用-2"><a href="#作用-2" class="headerlink" title="作用"></a>作用</h2><p>显示在某种情形下对象之间发送的消息。</p>
+<h1 id="顺序图"><a href="#顺序图" class="headerlink" title="顺序图"></a>顺序图</h1><h2 id="作用-3"><a href="#作用-3" class="headerlink" title="作用"></a>作用</h2><p>显示与通信图类以的信息，但强调的是顺序，而不是连接。</p>
+<h1 id="包图"><a href="#包图" class="headerlink" title="包图"></a>包图</h1><h2 id="作用-4"><a href="#作用-4" class="headerlink" title="作用"></a>作用</h2><p>显示相关的类如何组合，对开发人员有用。</p>
+<h1 id="部署图"><a href="#部署图" class="headerlink" title="部署图"></a>部署图</h1><h2 id="作用-5"><a href="#作用-5" class="headerlink" title="作用"></a>作用</h2><p>显示安装已完成系统的机器、过程和部署制品。</p>
+<h1 id="组件图"><a href="#组件图" class="headerlink" title="组件图"></a>组件图</h1><h2 id="作用-6"><a href="#作用-6" class="headerlink" title="作用"></a>作用</h2><p>显示可重用的组件（对象或子系统）及期接口。</p>
+<h1 id="交互总图"><a href="#交互总图" class="headerlink" title="交互总图"></a>交互总图</h1><h2 id="作用-7"><a href="#作用-7" class="headerlink" title="作用"></a>作用</h2><p>使用顺序图喧赤活动的务个步骤。</p>
+<h1 id="时间图"><a href="#时间图" class="headerlink" title="时间图"></a>时间图</h1><h2 id="作用-8"><a href="#作用-8" class="headerlink" title="作用"></a>作用</h2><p>显示消息和对象状态的准确时间限制。</p>
+<h1 id="复合结构图"><a href="#复合结构图" class="headerlink" title="复合结构图"></a>复合结构图</h1><h2 id="作用-9"><a href="#作用-9" class="headerlink" title="作用"></a>作用</h2><p>显示对象在聚合或复合中的相互关系，显示接口和协作的对象</p>
 ]]></content>
     
     <summary type="html">
