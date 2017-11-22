@@ -96,7 +96,7 @@ $git config --global user.email  "[yourEmail]"//填写自己的邮箱
 
 - 安装 hexo 插件
 
-  ```
+  ```powershell
   $npm install hexo-generator-index --save
   $npm install hexo-generator-archive --save
   $npm install hexo-generator-category --save
@@ -110,6 +110,7 @@ $git config --global user.email  "[yourEmail]"//填写自己的邮箱
   $npm install hexo-renderer-stylus@0.2 --save
   $npm install hexo-generator-feed@1 --save
   $npm install hexo-generator-sitemap@1 --save
+  $npm install hexo-wordcount --save
   ```
 
 - 安装 ejs，否则无法解析模板
