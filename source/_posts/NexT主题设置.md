@@ -1,6 +1,7 @@
 ---
 title: NexT主题设置
 comments: true
+abbrlink: fde961f3
 date: 2017-11-22 18:03:17
 categories:
 tags:
@@ -30,7 +31,7 @@ NexT主题默认已经集成了文章【字数统计】、【阅读时长】统�
 </span>
 ```
 
-添加 “字”到`{{ wordcount(post.content) }}` 后面，修改后为
+添加 “字”到`wordcount(post.content)` 后面，修改后为
 
 ```html
 <span title="{{ __('post.wordcount') }}">
@@ -48,7 +49,7 @@ NexT主题默认已经集成了文章【字数统计】、【阅读时长】统�
 </span>
 ```
 
-添加 “分钟”到`{{ min2read(post.content) }}` 后面，修改后为：
+添加 “分钟”到`min2read(post.content)` 后面，修改后为：
 
 ```html
 <span title="{{ __('post.min2read') }}">
