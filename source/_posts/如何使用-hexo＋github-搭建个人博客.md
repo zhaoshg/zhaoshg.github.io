@@ -25,6 +25,8 @@ GitHub Pages 有以下几个优点：
 
 # 准备工作
 
+<!-- more -->
+
 注意: 本文针对 Windows 平台和 Hexo 3.1.1
 
 ## 安装 github windows
