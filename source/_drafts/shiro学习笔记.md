@@ -1,6 +1,7 @@
 ---
 title: shiro学习笔记
 comments: true
+abbrlink: d5ace704
 date: 2017-12-06 16:37:00
 categories:
 tags:
@@ -18,7 +19,9 @@ Shiro可以非常容易的开发出足够好的应用，其不仅可以用在Jav
 
 ![图1](http://op06ugvox.bkt.clouddn.com/hexo/shiro%E5%AD%A6%E4%B9%A0%E7%AC%94%E8%AE%B0/1.png)
 
-**Authentication**：身份认证/登录，验证用户是不是拥有相应的身份；
+<!-- more -->
+
+Authentication**：身份认证/登录，验证用户是不是拥有相应的身份；
 
 **Authorization**：授权，即权限验证，验证某个已认证的用户是否拥有某个权限；即判断用户是否能做事情，常见的如：验证某个用户是否拥有某个角色。或者细粒度的验证某个用户对某个资源是否具有某个权限；
 
