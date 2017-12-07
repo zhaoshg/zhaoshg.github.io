@@ -427,9 +427,7 @@ securityManager.realms=$myRealm1,$myRealm3
       }
       ```
 
-      shiro-authenticator-all-fail.ini与shiro-authenticator-all-success.ini不同的配置是使用了securityManager.realms=$myRealm1,$myRealm2；即myRealm验证失败。
-
-      ​
+      shiro-authenticator-all-fail.ini与shiro-authenticator-all-success.ini不同的配置是使用了securityManager.realms=\$myRealm1,\$myRealm2；即myRealm验证失败。
 
       对于AtLeastOneSuccessfulStrategy和FirstSuccessfulStrategy的区别，请参照testAtLeastOneSuccessfulStrategyWithSuccess和testFirstOneSuccessfulStrategyWithSuccess测试方法。唯一不同点一个是返回所有验证成功的Realm的认证信息；另一个是只返回第一个验证成功的Realm的认证信息。
 
@@ -457,10 +455,7 @@ securityManager.realms=$myRealm1,$myRealm3
 
       因为每个AuthenticationStrategy实例都是无状态的，所有每次都通过接口将相应的认证信息传入下一次流程；通过如上接口可以进行如合并/返回第一个验证成功的认证信息。
 
-
       自定义实现时一般继承org.apache.shiro.authc.pam.AbstractAuthenticationStrategy即可，具体可以参考代码com.github.zhangkaitao.shiro.chapter2.authenticator.strategy包下OnlyOneAuthenticatorStrategy 和AtLeastTwoAuthenticatorStrategy。
-
-​       
 
       到此基本的身份验证就搞定了，对于AuthenticationToken 、AuthenticationInfo和Realm的详细使用后续章节再陆续介绍。
 
@@ -540,22 +535,256 @@ public void hello() {
 
 ### 基于角色的访问控制（隐式角色）
 
+1. 在ini配置文件配置用户拥有的角色（shiro-role.ini）
 
+   ```ini
+   [users]  
+   zhang=123,role1,role2  
+   wang=123,role1
+   ```
+
+   规则即：“用户名=密码,角色1，角色2”，如果需要在应用中判断用户是否有相应角色，就需要在相应的Realm中返回角色信息，也就是说Shiro不负责维护用户-角色信息，需要应用提供，Shiro只是提供相应的接口方便验证，后续会介绍如何动态的获取用户角色。
+
+2. 测试用例（com.github.zhangkaitao.shiro.chapter3.RoleTest）
+
+   ```java
+   @Test  
+   public void testHasRole() {  
+       login("classpath:shiro-role.ini", "zhang", "123");  
+       //判断拥有角色：role1  
+       Assert.assertTrue(subject().hasRole("role1"));  
+       //判断拥有角色：role1 and role2  
+       Assert.assertTrue(subject().hasAllRoles(Arrays.asList("role1", "role2")));  
+       //判断拥有角色：role1 and role2 and !role3  
+       boolean[] result = subject().hasRoles(Arrays.asList("role1", "role2", "role3"));  
+       Assert.assertEquals(true, result[0]);  
+       Assert.assertEquals(true, result[1]);  
+       Assert.assertEquals(false, result[2]);  
+   }
+   ```
+
+   Shiro提供了hasRole/hasRole用于判断用户是否拥有某个角色/某些权限；但是没有提供如hashAnyRole用于判断是否有某些权限中的某一个。
+
+   ```java
+   @Test(expected = UnauthorizedException.class)  
+   public void testCheckRole() {  
+       login("classpath:shiro-role.ini", "zhang", "123");  
+       //断言拥有角色：role1  
+       subject().checkRole("role1");  
+       //断言拥有角色：role1 and role3 失败抛出异常  
+       subject().checkRoles("role1", "role3");  
+   }
+   ```
+
+   Shiro提供的checkRole/checkRoles和hasRole/hasAllRoles不同的地方是它在判断为假的情况下会抛出UnauthorizedException异常。
+
+   到此基于角色的访问控制（即隐式角色）就完成了，这种方式的缺点就是如果很多地方进行了角色判断，但是有一天不需要了那么就需要修改相应代码把所有相关的地方进行删除；这就是粗粒度造成的问题。
 
 ### 基于资源的访问控制（显示角色）
 
+1. 在ini配置文件配置用户拥有的角色及角色-权限关系（shiro-permission.ini） 
+
+   ```ini
+   [users]  
+   zhang=123,role1,role2  
+   wang=123,role1  
+   [roles]  
+   role1=user:create,user:update  
+   role2=user:create,user:delete
+   ```
+
+   规则：“用户名=密码，角色1，角色2”“角色=权限1，权限2”，即首先根据用户名找到角色，然后根据角色再找到权限；即角色是权限集合；Shiro同样不进行权限的维护，需要我们通过Realm返回相应的权限信息。只需要维护“用户——角色”之间的关系即可。
+
+2. 测试用例（com.github.zhangkaitao.shiro.chapter3.PermissionTest）
+
+   ```java
+   @Test  
+   public void testIsPermitted() {  
+       login("classpath:shiro-permission.ini", "zhang", "123");  
+       //判断拥有权限：user:create  
+       Assert.assertTrue(subject().isPermitted("user:create"));  
+       //判断拥有权限：user:update and user:delete  
+       Assert.assertTrue(subject().isPermittedAll("user:update", "user:delete"));  
+       //判断没有权限：user:view  
+       Assert.assertFalse(subject().isPermitted("user:view"));  
+   }   
+   ```
+
+   Shiro提供了isPermitted和isPermittedAll用于判断用户是否拥有某个权限或所有权限，也没有提供如isPermittedAny用于判断拥有某一个权限的接口。
+
+   ```java
+   @Test(expected = UnauthorizedException.class)  
+   public void testCheckPermission () {  
+       login("classpath:shiro-permission.ini", "zhang", "123");  
+       //断言拥有权限：user:create  
+       subject().checkPermission("user:create");  
+       //断言拥有权限：user:delete and user:update  
+       subject().checkPermissions("user:delete", "user:update");  
+       //断言拥有权限：user:view 失败抛出异常  
+       subject().checkPermissions("user:view");  
+   }
+   ```
+
+   但是失败的情况下会抛出UnauthorizedException异常。
+
+   到此基于资源的访问控制（显示角色）就完成了，也可以叫基于权限的访问控制，这种方式的一般规则是“资源标识符：操作”，即是资源级别的粒度；这种方式的好处就是如果要修改基本都是一个资源级别的修改，不会对其他模块代码产生影响，粒度小。但是实现起来可能稍微复杂点，需要维护“用户——角色，角色——权限（资源：操作）”之间的关系。
+
 ## Permission字符串通配符权限
 
+规则：“资源标识符：操作：对象实例ID”  即对哪个资源的哪个实例可以进行什么操作。其默认支持通配符权限字符串，“:”表示资源/操作/实例的分割；“,”表示操作的分割；“*”表示任意资源/操作/实例。
+
 ### 单个资源单个权限
+
+```java
+subject().checkPermissions("system:user:update");
+```
+
+用户拥有资源“system:user”的“update”权限。
+
 ### 单个资源多个权限
+
+```ini
+role41=system:user:update,system:user:delete
+```
+
+然后通过如下代码判断
+
+```java
+subject().checkPermissions("system:user:update", "system:user:delete");
+```
+
+用户拥有资源“system:user”的“update”和“delete”权限。如上可以简写成：
+
+```ini
+role42="system:user:update,delete" #（表示角色4拥有system:user资源的update和delete权限）   
+```
+
+接着可以通过如下代码判断 
+
+```java
+subject().checkPermissions("system:user:update,delete");
+```
+
+通过“system:user:update,delete”验证"system:user:update, system:user:delete"是没问题的，但是反过来是规则不成立。
+
 ### 单个资源全部权限
+
+```ini
+role51="system:user:create,update,delete,view"
+```
+
+然后通过如下代码判断 
+
+```java
+subject().checkPermissions("system:user:create,delete,update:view");
+```
+
+用户拥有资源“system:user”的“create”、“update”、“delete”和“view”所有权限。如上可以简写成：
+
+```ini
+#表示角色5拥有system:user的所有权限
+role52=system:user:*
+```
+
+也可以简写为（推荐上边的写法）：
+
+```
+role53=system:user
+```
+
+然后通过如下代码判断
+
+```java
+subject().checkPermissions("system:user:*");
+subject().checkPermissions("system:user");
+```
+
+通过“system:user:*”验证“system:user:create,delete,update:view”可以，但是反过来是不成立的。
+
 ### 所有资源全部权限
+
+```ini
+role61=*:view
+```
+
+然后通过如下代码判断
+
+```java
+subject().checkPermissions("user:view");
+```
+
+用户拥有所有资源的“view”所有权限。假设判断的权限是“"system:user:view”，那么需要“role5=*:*:view”这样写才行。
+
+
+
 ### 实例级别的权限
 #### 单个实例单个权限
+
+```ini
+#对资源user的1实例拥有view权限。
+role71=user:view:1
+```
+
+然后通过如下代码判断 
+
+```java
+subject().checkPermissions("user:view:1"); 
+```
+
 #### 单个实例多个权限
+
+```ini
+#对资源user的1实例拥有update、delete权限。
+role72="user:update,delete:1"
+```
+
+然后通过如下代码判断
+
+```java
+subject().checkPermissions("user:delete,update:1");  
+subject().checkPermissions("user:update:1", "user:delete:1");
+```
+
 #### 单个实例所有权限
+
+```
+#对资源user的1实例拥有所有权限。
+role73=user:*:1
+```
+
+然后通过如下代码判断 
+
+```
+subject().checkPermissions("user:update:1", "user:delete:1", "user:view:1");
+```
+
 #### 所有实例单个权限
+```ini
+#对资源user的1实例拥有所有权限。
+role74=user:auth:*
+```
+
+然后通过如下代码判断 
+
+```java
+subject().checkPermissions("user:auth:1", "user:auth:2");
+```
+
 #### 所有实例所有权限
+
+```ini
+#对资源user的1实例拥有所有权限。
+role75=user:*:*
+```
+
+然后通过如下代码判断 
+
+```java
+subject().checkPermissions("user:view:1", "user:auth:2");
+```
+
+
+
 ### Shiro对权限字符串缺失部分的处理
 ### WildcardPermission
 ### 性能问题
