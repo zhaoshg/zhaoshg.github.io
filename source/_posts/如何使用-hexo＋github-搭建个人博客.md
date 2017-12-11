@@ -2,7 +2,9 @@
 title: 如何使用 hexo＋github 搭建个人博客
 abbrlink: bb827274
 date: 2017-11-22 16:54:08
+categories: hexo
 tags:
+  - hexo
 ---
 
 GitHub Pages 有以下几个优点：

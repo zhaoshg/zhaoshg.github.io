@@ -3,8 +3,10 @@ title: Mac下IDEA常用快捷键
 comments: true
 abbrlink: 472262bf
 date: 2017-11-26 16:00:56
-categories:
+categories: mac
 tags:
+	- mac
+	- IDEA
 ---
 
 

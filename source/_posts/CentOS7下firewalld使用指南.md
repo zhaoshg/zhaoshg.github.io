@@ -3,8 +3,11 @@ title: CentOS7下firewalld使用指南
 comments: true
 abbrlink: f0ffc0f0
 date: 2017-11-23 10:23:25
-categories:
+categories: linux
 tags:
+	- linux
+	- centos
+	- firewalld
 ---
 
 # 1、firewalld的基本使用

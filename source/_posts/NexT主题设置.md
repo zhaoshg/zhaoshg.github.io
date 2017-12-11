@@ -3,8 +3,10 @@ title: NexT主题设置
 comments: true
 abbrlink: fde961f3
 date: 2017-11-22 18:03:17
-categories:
+categories: hexo
 tags:
+	- hexo
+	- NexT
 ---
 
 # NexT字数统计与阅读时长设置

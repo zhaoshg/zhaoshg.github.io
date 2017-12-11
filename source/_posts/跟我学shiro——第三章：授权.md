@@ -208,7 +208,8 @@ subject().checkPermissions("system:user:update", "system:user:delete");
 用户拥有资源“system:user”的“update”和“delete”权限。如上可以简写成：
 
 ```ini
-role42="system:user:update,delete" #（表示角色4拥有system:user资源的update和delete权限）   
+#表示角色4拥有system:user资源的update和delete权限
+role42="system:user:update,delete"
 ```
 
 接着可以通过如下代码判断 
@@ -217,7 +218,7 @@ role42="system:user:update,delete" #（表示角色4拥有system:user资源的up
 subject().checkPermissions("system:user:update,delete");
 ```
 
-通过“system:user:update,delete”验证"system:user:update, system:user:delete"是没问题的，但是反过来是规则不成立。
+通过`system:user:update,delete`验证`system:user:update, system:user:delete`是没问题的，但是反过来是规则不成立。
 
 ### 单个资源全部权限
 
@@ -231,7 +232,7 @@ role51="system:user:create,update,delete,view"
 subject().checkPermissions("system:user:create,delete,update:view");
 ```
 
-用户拥有资源“system:user”的“create”、“update”、“delete”和“view”所有权限。如上可以简写成：
+用户拥有资源`system:user`的`create`、`update`、`delete`和`view`所有权限。如上可以简写成：
 
 ```ini
 #表示角色5拥有system:user的所有权限
@@ -248,10 +249,11 @@ role53=system:user
 
 ```java
 subject().checkPermissions("system:user:*");
+//or
 subject().checkPermissions("system:user");
 ```
 
-通过“system:user:*”验证“system:user:create,delete,update:view”可以，但是反过来是不成立的。
+通过`system:user:*`验证`system:user:create,delete,update:view`可以，但是反过来是不成立的。
 
 ### 所有资源全部权限
 
@@ -265,7 +267,7 @@ role61=*:view
 subject().checkPermissions("user:view");
 ```
 
-用户拥有所有资源的“view”所有权限。假设判断的权限是“"system:user:view”，那么需要“role5=*:*:view”这样写才行。
+用户拥有所有资源的`view`所有权限。假设判断的权限是`system:user:view`，那么需要`role5=*:*:view`这样写才行。
 
 
 
@@ -295,6 +297,7 @@ role72="user:update,delete:1"
 
 ```java
 subject().checkPermissions("user:delete,update:1");  
+//or
 subject().checkPermissions("user:update:1", "user:delete:1");
 ```
 
