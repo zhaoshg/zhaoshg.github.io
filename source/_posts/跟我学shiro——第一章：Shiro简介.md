@@ -1,11 +1,12 @@
 ---
 title: 跟我学shiro——第一章：Shiro简介
 comments: true
-date: 2017-12-11 15:05:20
 categories: 跟我学shiro
 tags:
-	- shiro
-	- 跟我学shiro
+  - shiro
+  - 跟我学shiro
+abbrlink: fa6b97a6
+date: 2017-12-11 15:05:20
 ---
 
 

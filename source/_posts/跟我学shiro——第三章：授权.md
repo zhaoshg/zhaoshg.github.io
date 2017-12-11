@@ -1,11 +1,12 @@
 ---
 title: 跟我学shiro——第三章：授权
 comments: true
-date: 2017-12-11 15:15:11
 categories: 跟我学shiro
 tags:
-	- shiro
-	- 跟我学shiro
+  - shiro
+  - 跟我学shiro
+abbrlink: 5ff7915b
+date: 2017-12-11 15:15:11
 ---
 
 # 授权

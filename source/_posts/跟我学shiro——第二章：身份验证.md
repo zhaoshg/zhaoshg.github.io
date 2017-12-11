@@ -1,11 +1,12 @@
 ---
 title: 跟我学shiro——第二章：身份验证
 comments: true
-date: 2017-12-11 15:06:27
 categories: 跟我学shiro
 tags:
-	- shiro
-	- 跟我学shiro
+  - shiro
+  - 跟我学shiro
+abbrlink: 372173ef
+date: 2017-12-11 15:06:27
 ---
 
 # 身份验证
