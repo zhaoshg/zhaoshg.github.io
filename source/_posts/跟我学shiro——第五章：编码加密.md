@@ -16,7 +16,7 @@ date: 2017-12-16 19:52:31
 ## 编码/解码 
 
 Shiro提供了base64和16进制字符串编码/解码的API支持，方便一些编码解码操作。Shiro内部的一些数据的存储/表示都使用了base64和16进制字符串。
-
+<!-- more -->
 ```java
 String str = "hello";  
 String base64Encoded = Base64.encodeToString(str.getBytes());  
