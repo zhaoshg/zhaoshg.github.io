@@ -93,7 +93,7 @@
 <meta property="og:site_name" content="曙光博客">
 <meta property="og:description" content="Springboot 防XSS攻击的处理XSS攻击大家可能都知道是什么。 防xss攻击有2种方式，一种是输入过滤，一种是输出过滤。输入过滤有个好处，是可以顺便防SQL注入，但有个坏处，就是数据库被人手动加了个攻击脚本之类的，则会导致xss问题。而且我们大家基本会用一些开源的ORM框架，比如mybatis，都是预编译模式，它也会帮你挡住一些sql注入问题。 一般情况，我们会对输入做过滤，这样保存到数">
 <meta property="og:locale" content="zh-Hans">
-<meta property="og:updated_time" content="2019-05-01T03:36:57.442Z">
+<meta property="og:updated_time" content="2019-05-01T03:41:57.737Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Springboot 防XSS攻击的处理">
 <meta name="twitter:description" content="Springboot 防XSS攻击的处理XSS攻击大家可能都知道是什么。 防xss攻击有2种方式，一种是输入过滤，一种是输出过滤。输入过滤有个好处，是可以顺便防SQL注入，但有个坏处，就是数据库被人手动加了个攻击脚本之类的，则会导致xss问题。而且我们大家基本会用一些开源的ORM框架，比如mybatis，都是预编译模式，它也会帮你挡住一些sql注入问题。 一般情况，我们会对输入做过滤，这样保存到数">
@@ -404,9 +404,9 @@
 <h3 id="JsonSerialize-的使用"><a href="#JsonSerialize-的使用" class="headerlink" title="@JsonSerialize 的使用"></a>@JsonSerialize 的使用</h3><p>此注解用于属性或者getter方法上，用于在序列化时嵌入开发者自定义的代码。比如我有个字段不需要过滤xss。</p>
 <p>那我完全可以写一个NoneXssStringJsonSerializer.java 里面把下面这两句注释掉：</p>
 <figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//String encodedValue = HtmlUtils.htmlEscape(value);</span></span><br><span class="line"><span class="comment">//jsonGenerator.writeString(encodedValue);</span></span><br></pre></td></tr></table></figure>
-<p>然后，把@JsonSerialize(using=NoXssStringJsonSerializer.class)放到那个字段的get方法上。</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@JsonSerialize</span>(using=NoXssStringJsonSerializer.class)</span><br><span class="line"><span class="function"><span class="keyword">public</span> T <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">	<span class="keyword">return</span> value;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-<p>当然，你还可以让这个NoXssStringJsonSerializer干些别的事情，比如像上面说的，把Date转成Long，格式化时间啊、字符串啊，等等等等。</p>
+<p>然后，把@JsonSerialize(using=NoneXssStringJsonSerializer.class)放到那个字段的get方法上。</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@JsonSerialize</span>(using=NoneXssStringJsonSerializer.class)</span><br><span class="line"><span class="function"><span class="keyword">public</span> T <span class="title">getValue</span><span class="params">()</span></span>&#123;</span><br><span class="line">	<span class="keyword">return</span> value;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>当然，你还可以让这个NoneXssStringJsonSerializer干些别的事情，比如像上面说的，把Date转成Long，格式化时间啊、字符串啊，等等等等。</p>
 <h3 id="JsonDeserialize的使用"><a href="#JsonDeserialize的使用" class="headerlink" title="@JsonDeserialize的使用"></a>@JsonDeserialize的使用</h3><p>和@JsonSerialize一样，只不过这个在反序列化时候用而已。</p>
 
       
